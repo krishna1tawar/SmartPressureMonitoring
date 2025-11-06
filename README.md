@@ -1,2 +1,3 @@
 # SensoreProject
-Sensore - pressure mapping app (team project)
+<br>
+Sensore - pressure mapping app team project
