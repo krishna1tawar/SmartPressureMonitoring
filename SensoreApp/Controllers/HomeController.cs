@@ -18,6 +18,11 @@ public class HomeController : Controller
         return View();
     }
 
+    public IActionResult CrashTest()
+    {
+        throw new Exception("Simulated crash for middleware test");
+    }
+
     public IActionResult Privacy()
     {
         return View();
