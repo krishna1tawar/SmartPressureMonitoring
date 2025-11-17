@@ -1,0 +1,129 @@
+﻿@{
+    ViewData["Title"] = "Alerts - Anomaly History";
+}
+
+<div class="container mt-4">
+
+    <h2 class="mb-3 text-center">⚠️ Anomaly Alerts (Pressure Spikes)</h2>
+
+    <p class="text-muted text-center">
+        This page shows all readings where the system detected an anomaly using the ML model.
+    </p>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Alerts</h6>
+                    <h3 id="totalAlerts" class="fw-bold">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Most Recent Alert</h6>
+                    <div id="latestAlertTime">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Highest Pressure Alert</h6>
+                    <div id="maxPressureAlert">-</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Alerts Table -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <h5 class="mb-3">📋 Alerts List</h5>
+
+            <table class="table table-bordered table-striped" id="alertsTable">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Pressure</th>
+                        <th>Message</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Resolve</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsBody">
+                    <!-- Filled by JavaScript -->
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+    async function loadAlerts() {
+        const response = await fetch("/api/alerts/list");
+        const alerts = await response.json();
+
+        // Summary Boxes
+        document.getElementById("totalAlerts").innerText = alerts.length;
+
+        if (alerts.length > 0) {
+            // Most Recent
+            document.getElementById("latestAlertTime").innerText =
+                new Date(alerts[0].timestamp).toLocaleString();
+
+            // Highest Pressure
+            const maxP = Math.max(...alerts.map(a => a.pressure));
+            document.getElementById("maxPressureAlert").innerText =
+                maxP.toFixed(2) + " PSI";
+        }
+
+        // Table Body
+        const tbody = document.getElementById("alertsBody");
+        tbody.innerHTML = "";
+
+        alerts.forEach(alert => {
+            const row = `
+                <tr>
+                    <td>${alert.id}</td>
+                    <td>${alert.pressure.toFixed(2)}</td>
+                    <td>${alert.message}</td>
+                    <td>${new Date(alert.timestamp).toLocaleString()}</td>
+                    <td>
+                        ${alert.isResolved
+                            ? "<span class='badge bg-success'>Resolved</span>"
+                            : "<span class='badge bg-danger'>Active</span>"
+                        }
+                    </td>
+                    <td>
+                        ${alert.isResolved
+                            ? "-"
+                            : `<button class="btn btn-sm btn-primary" onclick="resolveAlert(${alert.id})">Resolve</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+
+            tbody.innerHTML += row;
+        });
+    }
+
+    async function resolveAlert(id) {
+        await fetch(`/api/alerts/resolve/${id}`, { method: "POST" });
+        loadAlerts();  // refresh page content
+    }
+
+    loadAlerts();
+    setInterval(loadAlerts, 5000); // auto-refresh
+</script>
