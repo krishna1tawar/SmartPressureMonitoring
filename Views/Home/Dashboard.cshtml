@@ -1,0 +1,59 @@
+﻿@{
+    ViewData["Title"] = "Live Dashboard";
+}
+
+<div class="container mt-4">
+
+    <h2 class="text-center mb-4">📡 Live Pressure Dashboard</h2>
+
+    <!-- Live Reading Card -->
+    <div class="card shadow-lg text-center p-4">
+        <h4 class="text-muted">Current Pressure</h4>
+
+        <h1 id="pressureValue" class="fw-bold display-3">--</h1>
+
+        <span id="anomalyStatus" class="badge bg-secondary p-2 mt-2">Checking...</span>
+
+        <p class="text-muted mt-3">
+            Last Updated:
+            <span id="timestampText">--</span>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function loadPressure() {
+            try {
+                const response = await fetch('/api/sensordata/latest');
+                const data = await response.json();
+
+                document.getElementById("pressureValue").innerText = data.pressure.toFixed(2);
+                document.getElementById("timestampText").innerText = new Date(data.timestamp).toLocaleString();
+
+                const status = document.getElementById("anomalyStatus");
+
+                if (data.anomaly) {
+                    status.className = "badge bg-danger p-2";
+                    status.innerText = "⚠ ANOMALY DETECTED";
+
+                    // Flashing effect
+                    document.getElementById("pressureValue").style.color = "red";
+                }
+                else {
+                    status.className = "badge bg-success p-2";
+                    status.innerText = "Normal";
+
+                    document.getElementById("pressureValue").style.color = "black";
+                }
+
+            } catch (err) {
+                console.error("Error fetching data:", err);
+            }
+        }
+
+        // Update every 1 second
+        loadPressure();
+        setInterval(loadPressure, 1000);
+    </script>
+}
