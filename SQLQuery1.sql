@@ -1,0 +1,6 @@
+﻿INSERT INTO SensorData (Pressure, Timestamp)
+VALUES
+(32, GETDATE()),
+(44, DATEADD(MINUTE, -10, GETDATE())),
+(55, DATEADD(MINUTE, -20, GETDATE())),
+(60, DATEADD(HOUR, -1, GETDATE()));

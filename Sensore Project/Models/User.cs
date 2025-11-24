@@ -1,4 +1,4 @@
-﻿namespace SensoreApp.Models
+﻿namespace Sensore_Project.Models
 {
     public class User
     {

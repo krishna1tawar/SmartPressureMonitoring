@@ -1,0 +1,275 @@
+﻿@{
+    ViewData["Title"] = "Live Dashboard";
+}
+
+<div class="container mt-4">
+
+    <h2 class="text-center mb-4">📡 Live Pressure Dashboard</h2>
+
+    <!-- 1. LIVE READING CARD -->
+    <div class="card shadow-lg text-center p-4 mb-4">
+        <h4 class="text-muted">Current Pressure</h4>
+
+        <h1 id="pressureValue" class="fw-bold display-3">--</h1>
+
+        <span id="anomalyStatus" class="badge bg-secondary p-2 mt-2">Checking...</span>
+
+        <p class="text-muted mt-3 mb-0">
+            Last Updated:
+            <span id="timestampText">--</span>
+        </p>
+    </div>
+
+    <!-- 2. PRESSURE TREND -->
+    <div class="card mt-4 shadow mb-4">
+        <div class="card-body">
+            <h4>📈 24-Hour Pressure Trend</h4>
+            <canvas id="pressureChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- 3. RISK TREND -->
+    <div class="card mt-4 shadow mb-4">
+        <div class="card-body">
+            <h4>⚠️ 24-Hour Risk Trend</h4>
+            <canvas id="riskChart" height="100"></canvas>
+        </div>
+    </div>
+
+    <!-- 4. ANOMALY TREND -->
+    <div class="card mt-4 shadow mb-5">
+        <div class="card-body">
+            <h4>🚨 24-Hour Anomaly Trend</h4>
+            <canvas id="anomalyChart" height="100"></canvas>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        // =======================================
+        // 1. LIVE PRESSURE CARD
+        // =======================================
+        async function loadPressure() {
+            try {
+                const response = await fetch('/api/SensorData/latest');
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                const data = await response.json();
+
+                const pressureValue = document.getElementById("pressureValue");
+                const timestampText = document.getElementById("timestampText");
+                const status = document.getElementById("anomalyStatus");
+
+                pressureValue.innerText = data.pressure.toFixed(2);
+                timestampText.innerText = new Date(data.timestamp).toLocaleString();
+
+                if (data.anomaly === true || data.isAnomaly === true) {
+                    status.className = "badge bg-danger p-2 mt-2";
+                    status.innerText = "⚠ ANOMALY DETECTED";
+                    pressureValue.style.color = "red";
+                } else {
+                    status.className = "badge bg-success p-2 mt-2";
+                    status.innerText = "Normal";
+                    pressureValue.style.color = "black";
+                }
+
+            } catch (err) {
+                console.error("Error fetching latest pressure:", err);
+            }
+        }
+
+        // =======================================
+        // 2. HELPER TO LOAD LAST 24H HISTORY
+        // =======================================
+        async function load24hData() {
+            const end = new Date().toISOString();
+            const start = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+            const url = `/api/SensorData/by-date?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error('History HTTP ' + res.status);
+            }
+            return await res.json(); // expecting array of { timestamp, pressure, riskScore, anomaly }
+        }
+
+        // =======================================
+        // 3. PRESSURE CHART
+        // =======================================
+        let pressureChart = null;
+
+        async function loadPressureChart() {
+            try {
+                const data = await load24hData();
+                if (!data || data.length === 0) {
+                    console.log("No history data for pressure chart");
+                    return;
+                }
+
+                const labels = data.map(d =>
+                    new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                );
+
+                const values = data.map(d => d.pressure);
+
+                const ctx = document.getElementById('pressureChart').getContext('2d');
+                if (pressureChart) pressureChart.destroy();
+
+                pressureChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Pressure (last 24 hours)",
+                            data: values,
+                            borderWidth: 2,
+                            borderColor: "blue",
+                            tension: 0.3,
+                            fill: false
+                        }]
+                    }
+                });
+
+            } catch (err) {
+                console.error("Pressure chart error:", err);
+            }
+        }
+
+        // =======================================
+        // 4. RISK CHART
+        // =======================================
+        let riskChart = null;
+
+        async function loadRiskChart() {
+            try {
+                const data = await load24hData();
+                if (!data || data.length === 0) {
+                    console.log("No history data for risk chart");
+                    return;
+                }
+
+                const labels = data.map(d =>
+                    new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                );
+
+                // If your API returns "riskScore" use that; otherwise compute a simple rule.
+                const values = data.map(d => {
+                    if (d.riskScore !== undefined && d.riskScore !== null) {
+                        return d.riskScore;
+                    }
+                    // fallback rule: normalised distance from 80–120 band
+                    const p = d.pressure;
+                    const minSafe = 80;
+                    const maxSafe = 120;
+                    let diff = 0;
+                    if (p < minSafe) diff = minSafe - p;
+                    else if (p > maxSafe) diff = p - maxSafe;
+                    return Math.min(diff / 80.0, 1.0);
+                });
+
+                const ctx = document.getElementById('riskChart').getContext('2d');
+                if (riskChart) riskChart.destroy();
+
+                riskChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Risk Score (0-1)",
+                            data: values,
+                            borderWidth: 2,
+                            borderColor: "red",
+                            tension: 0.3,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 1
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Risk chart error:", err);
+            }
+        }
+
+        // =======================================
+        // 5. ANOMALY CHART
+        // =======================================
+        let anomalyChart = null;
+
+        async function loadAnomalyChart() {
+            try {
+                const data = await load24hData();
+                if (!data || data.length === 0) {
+                    console.log("No history data for anomaly chart");
+                    return;
+                }
+
+                const labels = data.map(d =>
+                    new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                );
+
+                const values = data.map(d =>
+                    (d.anomaly === true || d.isAnomaly === true) ? 1 : 0
+                );
+
+                const ctx = document.getElementById('anomalyChart').getContext('2d');
+                if (anomalyChart) anomalyChart.destroy();
+
+                anomalyChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: "Anomaly (1 = anomaly, 0 = normal)",
+                            data: values,
+                            borderWidth: 2,
+                            borderColor: "orange",
+                            tension: 0.3,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                min: 0,
+                                max: 1,
+                                ticks: { stepSize: 1 }
+                            }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Anomaly chart error:", err);
+            }
+        }
+
+        // =======================================
+        // 6. AUTO-REFRESH EVERYTHING
+        // =======================================
+        async function refreshDashboard() {
+            await loadPressure();
+            await loadPressureChart();
+            await loadRiskChart();
+            await loadAnomalyChart();
+        }
+
+        refreshDashboard();               // first load
+        setInterval(refreshDashboard, 5000); // every 5 seconds
+    </script>
+}
