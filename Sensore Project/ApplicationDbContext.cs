@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Sensore_Project.Models;
 
-namespace Sensore_Project.Models
+namespace Sensore_Project
 {
     public class ApplicationDbContext : DbContext
     {
@@ -10,12 +10,8 @@ namespace Sensore_Project.Models
         {
         }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<Comment> Comments { get; set; }
         public DbSet<SensorData> SensorData { get; set; }
-        public DbSet<RiskPrediction> RiskPredictions { get; set; }
-
-        // ✅ NEW — Add alerts table
         public DbSet<Alert> Alerts { get; set; }
+        public DbSet<RiskPrediction> RiskPredictions { get; set; }
     }
 }

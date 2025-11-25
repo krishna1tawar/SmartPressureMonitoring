@@ -3,20 +3,16 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Sensore_Project.Models;
 
 #nullable disable
 
 namespace Sensore_Project.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251115004113_CreateAlertsTable")]
-    partial class CreateAlertsTable
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -111,12 +107,6 @@ namespace Sensore_Project.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<double>("AnomalyScore")
-                        .HasColumnType("float");
-
-                    b.Property<bool>("IsAnomalous")
-                        .HasColumnType("bit");
-
                     b.Property<double>("Pressure")
                         .HasColumnType("float");
 
@@ -128,7 +118,7 @@ namespace Sensore_Project.Migrations
                     b.ToTable("SensorData");
                 });
 
-            modelBuilder.Entity("Sensore_Project.Models.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

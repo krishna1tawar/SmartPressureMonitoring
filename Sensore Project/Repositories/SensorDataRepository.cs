@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Sensore_Project.Models;
 
 namespace Sensore_Project.Repositories
 {
-    public class SensorDataRepository
+    public class SensorDataRepository : ISensorDataRepository
     {
         private readonly ApplicationDbContext _context;
 
@@ -16,51 +12,53 @@ namespace Sensore_Project.Repositories
             _context = context;
         }
 
-        /// <summary>
-        /// Returns the most recent sensor reading (or null if none).
-        /// </summary>
-        public Task<SensorData?> GetLatestAsync()
+        public async Task<SensorData?> GetLatestAsync()
         {
-            return _context.SensorData
+            return await _context.SensorData
+                .AsNoTracking()
                 .OrderByDescending(s => s.Timestamp)
                 .FirstOrDefaultAsync();
         }
 
-        /// <summary>
-        /// Returns the last N readings, newest first.
-        /// </summary>
-        public Task<List<SensorData>> GetRecentAsync(int count)
+        public async Task<List<SensorData>> GetRecentAsync(int count = 100)
         {
-            return _context.SensorData
+            return await _context.SensorData
+                .AsNoTracking()
                 .OrderByDescending(s => s.Timestamp)
                 .Take(count)
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Returns all readings between start and end (inclusive),
-        /// ordered by timestamp (oldest first).
-        /// </summary>
-        public Task<List<SensorData>> GetByDateRangeAsync(DateTime start, DateTime end)
+        public async Task<List<SensorData>> GetByDateRangeAsync(DateTime start, DateTime end)
         {
-            return _context.SensorData
+            return await _context.SensorData
+                .AsNoTracking()
                 .Where(s => s.Timestamp >= start && s.Timestamp <= end)
                 .OrderBy(s => s.Timestamp)
                 .ToListAsync();
         }
 
-        /// <summary>
-        /// Insert a new sensor reading.
-        /// </summary>
+        public async Task<List<SensorData>> GetByDateAsync(DateTime date)
+        {
+            return await _context.SensorData
+                .AsNoTracking()
+                .Where(s => s.Timestamp.Date == date.Date)
+                .OrderBy(s => s.Timestamp)
+                .ToListAsync();
+        }
+
         public async Task AddAsync(SensorData entity)
         {
-            _context.SensorData.Add(entity);
+            await _context.SensorData.AddAsync(entity);
             await _context.SaveChangesAsync();
         }
 
-        /// <summary>
-        /// Update an existing sensor reading.
-        /// </summary>
+        public async Task AddRangeAsync(IEnumerable<SensorData> list)
+        {
+            await _context.SensorData.AddRangeAsync(list);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(SensorData entity)
         {
             _context.SensorData.Update(entity);

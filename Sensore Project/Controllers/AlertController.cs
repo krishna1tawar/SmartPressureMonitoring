@@ -26,8 +26,14 @@ namespace Sensore_Project.Controllers
         [HttpPost("resolve/{id}")]
         public async Task<IActionResult> ResolveAlert(int id)
         {
+            var alert = await _alertsRepo.GetByIdAsync(id);
+
+            if (alert == null)
+                return NotFound(new { message = "Alert not found." });
+
             await _alertsRepo.ResolveAsync(id);
-            return Ok(new { message = "Alert marked as resolved" });
+
+            return Ok(new { message = "Alert marked as resolved." });
         }
     }
 }

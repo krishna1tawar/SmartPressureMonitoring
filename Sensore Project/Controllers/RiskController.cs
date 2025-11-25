@@ -15,24 +15,20 @@ namespace Sensore_Project.Controllers
         }
 
         /// <summary>
-        /// Predict risk based on the given pressure value.
+        /// Predict risk score + risk level based on pressure value.
         /// </summary>
         [HttpPost("predict")]
         public async Task<IActionResult> PredictRisk([FromBody] PressureRequest request)
         {
             if (request == null)
-                return BadRequest("Invalid request.");
+                return BadRequest(new { message = "Request body is required." });
 
             var result = await _riskService.PredictRiskAsync(request.Pressure);
-
-            if (result == null)
-                return NotFound("Not enough data to train risk model.");
 
             return Ok(result);
         }
     }
 
-    // Request body model
     public class PressureRequest
     {
         public double Pressure { get; set; }

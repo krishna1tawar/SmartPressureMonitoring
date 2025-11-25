@@ -8,8 +8,10 @@ namespace Sensore_Project.Models
         [Key]
         public int Id { get; set; }
 
+        [Required]
         public double Pressure { get; set; }
 
-        public DateTime Timestamp { get; set; }
+        [Required]
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }
 }

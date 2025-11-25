@@ -1,7 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Sensore_Project.Models;
 using Sensore_Project.Repositories;
 using Sensore_Project.Services;
 
@@ -11,56 +9,86 @@ namespace Sensore_Project.Controllers
     [Route("api/[controller]")]
     public class SensorDataController : ControllerBase
     {
-        private readonly SensorDataRepository _sensorRepo;
-        private readonly AlertsRepository _alertsRepo;
-        private readonly AnomalyDetectionService _anomalyService;
+        private readonly ISensorDataRepository _sensorRepo;
+        private readonly IAlertsRepository _alertsRepo;
+        private readonly IAnomalyDetectionService _anomalyService;
 
         public SensorDataController(
-            SensorDataRepository sensorRepo,
-            AlertsRepository alertsRepo,
-            AnomalyDetectionService anomalyService)
+            ISensorDataRepository sensorRepo,
+            IAlertsRepository alertsRepo,
+            IAnomalyDetectionService anomalyService)
         {
             _sensorRepo = sensorRepo;
             _alertsRepo = alertsRepo;
             _anomalyService = anomalyService;
         }
 
-        // =====================================================
-        // GET: api/SensorData/latest
-        // Returns the most recent reading + anomaly + risk info
-        // =====================================================
+        // ========================================================
+        // POST: /api/sensordata/add
+        // Inserts a new sensor reading
+        // ========================================================
+        [HttpPost("add")]
+        public async Task<IActionResult> AddReading([FromBody] SensorData data)
+        {
+            if (data == null)
+                return BadRequest(new { message = "Invalid sensor data." });
+
+            data.Timestamp = DateTime.UtcNow;
+            await _sensorRepo.AddAsync(data);
+
+            // Run anomaly detection
+            var anomaly = _anomalyService.CheckPressure(data.Pressure);
+            var risk = ComputeRisk(data.Pressure, anomaly.Score);
+
+            // Create alert if anomaly detected
+            if (anomaly.IsAnomaly)
+            {
+                await _alertsRepo.AddAsync(new Alert
+                {
+                    UserId = 1,
+                    Message = "Pressure anomaly detected",
+                    Pressure = data.Pressure,
+                    Timestamp = DateTime.Now,
+                    IsResolved = false
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Sensor reading saved.",
+                pressure = data.Pressure,
+                timestamp = data.Timestamp,
+                anomaly = anomaly.IsAnomaly,
+                score = anomaly.Score,
+                risk = risk.RiskLevel
+            });
+        }
+
+        // ========================================================
+        // GET: /api/sensordata/latest
+        // Returns latest reading
+        // ========================================================
         [HttpGet("latest")]
         public async Task<IActionResult> GetLatest()
         {
             var latest = await _sensorRepo.GetLatestAsync();
 
             if (latest == null)
-            {
-                return NotFound(new
-                {
-                    message = "No sensor data found."
-                });
-            }
+                return NotFound(new { message = "No sensor data available." });
 
-            // Check anomaly
             var anomaly = _anomalyService.CheckPressure(latest.Pressure);
-
-            // Compute risk based on pressure + anomaly score
             var risk = ComputeRisk(latest.Pressure, anomaly.Score);
 
-            // If anomaly detected, create an alert
             if (anomaly.IsAnomaly)
             {
-                var alert = new Models.Alert
+                await _alertsRepo.AddAsync(new Alert
                 {
-                    UserId = 1, // placeholder, no auth yet
+                    UserId = 1,
                     Message = "Pressure anomaly detected",
                     Pressure = latest.Pressure,
                     Timestamp = DateTime.Now,
                     IsResolved = false
-                };
-
-                await _alertsRepo.AddAsync(alert);
+                });
             }
 
             return Ok(new
@@ -74,25 +102,22 @@ namespace Sensore_Project.Controllers
             });
         }
 
-        // =====================================================
-        // GET: api/SensorData/history?count=100
-        // Returns last N readings (default 100)
-        // =====================================================
+        // ========================================================
+        // GET: /api/sensordata/history?count=100
+        // ========================================================
         [HttpGet("history")]
         public async Task<IActionResult> GetHistory([FromQuery] int count = 100)
         {
             if (count <= 0) count = 50;
-            if (count > 1000) count = 1000; // safety cap
+            if (count > 1000) count = 1000;
 
             var readings = await _sensorRepo.GetRecentAsync(count);
 
             if (readings == null || readings.Count == 0)
-            {
                 return NotFound(new { message = "No sensor data found." });
-            }
 
             var result = readings
-                .OrderBy(s => s.Timestamp) // oldest first for charts
+                .OrderBy(s => s.Timestamp)
                 .Select(s =>
                 {
                     var anomaly = _anomalyService.CheckPressure(s.Pressure);
@@ -112,40 +137,22 @@ namespace Sensore_Project.Controllers
             return Ok(result);
         }
 
-        // =====================================================
-        // GET: api/SensorData/by-date?start=2025-11-01&end=2025-11-10
-        // Returns readings in a date range
-        // =====================================================
+        // ========================================================
+        // GET: /api/sensordata/by-date?start=...&end=...
+        // ========================================================
         [HttpGet("by-date")]
-        public async Task<IActionResult> GetByDate(
-            [FromQuery] DateTime start,
-            [FromQuery] DateTime end)
+        public async Task<IActionResult> GetByDate(DateTime start, DateTime end)
         {
             if (start == default || end == default)
-            {
-                return BadRequest(new
-                {
-                    message = "Query parameters 'start' and 'end' are required."
-                });
-            }
+                return BadRequest(new { message = "start and end are required." });
 
             if (end < start)
-            {
-                return BadRequest(new
-                {
-                    message = "'end' date must be greater than or equal to 'start' date."
-                });
-            }
+                return BadRequest(new { message = "end date must be >= start date." });
 
             var readings = await _sensorRepo.GetByDateRangeAsync(start, end);
 
             if (readings == null || readings.Count == 0)
-            {
-                return NotFound(new
-                {
-                    message = "No sensor data found in the specified date range."
-                });
-            }
+                return NotFound(new { message = "No sensor data in this range." });
 
             var result = readings.Select(s =>
             {
@@ -166,33 +173,24 @@ namespace Sensore_Project.Controllers
             return Ok(result);
         }
 
-        // =====================================================
-        // Simple approximate risk scoring
-        // Returns:
-        //  - RiskScore: 0–100
-        //  - RiskLevel: Low / Medium / High / Critical
-        // =====================================================
+        // ========================================================
+        // RISK MODEL (0–100)
+        // ========================================================
         private (double RiskScore, string RiskLevel) ComputeRisk(double pressure, double anomalyScore)
         {
-            // Base risk from anomaly severity (0–1 → 0–70 points)
             double baseRisk = anomalyScore * 70.0;
 
-            // Extra risk from being far from a "typical" operating point (say 80)
             double typical = 80.0;
-            double distance = Math.Abs(pressure - typical) / typical; // normalized
+            double distance = Math.Abs(pressure - typical) / typical;
             double extraRisk = distance * 30.0;
 
-            double score = baseRisk + extraRisk;
+            double score = Math.Clamp(baseRisk + extraRisk, 0, 100);
 
-            // Clamp 0–100
-            if (score < 0) score = 0;
-            if (score > 100) score = 100;
-
-            string level;
-            if (score < 25) level = "Low";
-            else if (score < 50) level = "Medium";
-            else if (score < 75) level = "High";
-            else level = "Critical";
+            string level =
+                score < 25 ? "Low" :
+                score < 50 ? "Medium" :
+                score < 75 ? "High" :
+                "Critical";
 
             return (score, level);
         }

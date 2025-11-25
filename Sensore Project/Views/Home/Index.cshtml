@@ -5,8 +5,8 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">📊 Smart Pressure Monitoring Dashboard</h2>
 
-    <!-- Latest Readings Chart -->
-    <div class="card mb-4">
+    <!-- Latest Pressure Trend -->
+    <div class="card mb-4 shadow-sm border-0">
         <div class="card-header bg-primary text-white">
             Latest Pressure Readings
         </div>
@@ -15,18 +15,19 @@
         </div>
     </div>
 
-    <!-- Anomaly Table -->
-    <div class="card">
+    <!-- Alerts (Anomalies) Table -->
+    <div class="card shadow-sm border-0">
         <div class="card-header bg-danger text-white">
-            ⚠ Detected Anomalies
+            ⚠ Detected Alerts / Anomalies
         </div>
         <div class="card-body">
             <table class="table table-striped" id="anomalyTable">
-                <thead>
+                <thead class="table-dark">
                     <tr>
                         <th>Timestamp</th>
-                        <th>Pressure</th>
-                        <th>Anomaly Score</th>
+                        <th>Pressure (PSI)</th>
+                        <th>Message</th>
+                        <th>Status</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -35,7 +36,6 @@
     </div>
 </div>
 
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
@@ -43,62 +43,82 @@
 
     async function loadDashboard() {
         await loadLatestReadings();
-        await loadAnomalies();
+        await loadAlerts();
     }
 
-    // ==============================
-    // Load latest readings (chart)
-    // ==============================
+    // ============================
+    // Load latest reading (chart)
+    // endpoint: /api/SensorData/latest
+    // ============================
     async function loadLatestReadings() {
-        const response = await fetch('/api/sensor/latest');
-        const data = await response.json();
+        const response = await fetch('/api/SensorData/latest');
+        if (!response.ok) return;
 
-        const labels = data.map(x => new Date(x.timestamp).toLocaleTimeString());
-        const values = data.map(x => x.pressure);
+        const latest = await response.json();
+
+        const newLabel = new Date(latest.timestamp).toLocaleTimeString();
+        const newValue = latest.pressure;
+
+        const ctx = document.getElementById('pressureChart').getContext('2d');
 
         if (!chart) {
-            const ctx = document.getElementById('pressureChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: [newLabel],
                     datasets: [{
                         label: "Pressure (PSI)",
-                        data: values,
+                        data: [newValue],
+                        borderColor: 'blue',
                         borderWidth: 2,
-                        borderColor: 'blue'
+                        tension: 0.3
                     }]
                 }
             });
         } else {
-            chart.data.labels = labels;
-            chart.data.datasets[0].data = values;
+            chart.data.labels.push(newLabel);
+            chart.data.datasets[0].data.push(newValue);
+
+            // Limit to last 50 samples
+            if (chart.data.labels.length > 50) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+            }
+
             chart.update();
         }
     }
 
-    // ==============================
-    // Load anomaly list
-    // ==============================
-    async function loadAnomalies() {
-        const response = await fetch('/api/sensor/anomalies');
+    // ============================
+    // Load alert list
+    // endpoint: /api/alerts/list
+    // ============================
+    async function loadAlerts() {
+        const response = await fetch('/api/alerts/list');
+        if (!response.ok) return;
+
         const data = await response.json();
 
         const tbody = document.querySelector("#anomalyTable tbody");
         tbody.innerHTML = "";
 
-        data.forEach(item => {
-            const row = `
+        data.forEach(alert => {
+            tbody.innerHTML += `
                 <tr>
-                    <td>${new Date(item.timestamp).toLocaleString()}</td>
-                    <td>${item.pressure}</td>
-                    <td>${item.anomalyScore.toFixed(3)}</td>
+                    <td>${new Date(alert.timestamp).toLocaleString()}</td>
+                    <td>${alert.pressure.toFixed(2)}</td>
+                    <td>${alert.message}</td>
+                    <td>
+                        ${alert.isResolved
+                            ? "<span class='badge bg-success'>Resolved</span>"
+                            : "<span class='badge bg-danger'>Active</span>"
+                        }
+                    </td>
                 </tr>`;
-            tbody.innerHTML += row;
         });
     }
 
-    // Auto-refresh every 5 seconds
+    // Run every 5 seconds
     loadDashboard();
     setInterval(loadDashboard, 5000);
 </script>

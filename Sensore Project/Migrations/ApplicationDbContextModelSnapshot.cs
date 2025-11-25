@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Sensore_Project.Models;
 
 #nullable disable
 
@@ -119,7 +118,7 @@ namespace Sensore_Project.Migrations
                     b.ToTable("SensorData");
                 });
 
-            modelBuilder.Entity("Sensore_Project.Models.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

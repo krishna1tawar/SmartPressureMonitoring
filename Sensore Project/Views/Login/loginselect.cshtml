@@ -1,17 +1,31 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
-@{
-    ViewData["Title"] = "Login Select";
+﻿@{
+    ViewData["Title"] = "Select Login";
 }
-<h1>Please select the login type</h1>
-<a href="/Login/userlogin">
-    <button>Log in as User</button>
-</a>
-<a href="/Login/clinicianlogin">
-    <button>Log in as Clinician</button>
-</a>
-<a href="/Login/adminlogin">
-    <button>Log in as Admin</button>
-</a>
 
+<div class="container mt-5">
+    <h2 class="text-center mb-4">🔐 Select Login Type</h2>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+
+            <div class="card shadow-lg p-4 text-center border-0">
+
+                <p class="text-muted mb-4">Choose your role to continue</p>
+
+                <a href="/Login/userlogin" class="btn btn-primary btn-lg w-100 mb-3">
+                    👤 Login as User
+                </a>
+
+                <a href="/Login/clinicianlogin" class="btn btn-success btn-lg w-100 mb-3">
+                    🩺 Login as Clinician
+                </a>
+
+                <a href="/Login/adminlogin" class="btn btn-danger btn-lg w-100">
+                    🛠️ Login as Admin
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+</div>

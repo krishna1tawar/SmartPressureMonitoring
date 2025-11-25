@@ -5,15 +5,14 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Sensore_Project.Models;
 
 #nullable disable
 
 namespace Sensore_Project.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251117202654_FixPressureColumn_Final")]
-    partial class FixPressureColumn_Final
+    [Migration("20251125130813_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -122,7 +121,7 @@ namespace Sensore_Project.Migrations
                     b.ToTable("SensorData");
                 });
 
-            modelBuilder.Entity("Sensore_Project.Models.User", b =>
+            modelBuilder.Entity("User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

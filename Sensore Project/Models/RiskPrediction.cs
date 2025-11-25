@@ -1,4 +1,6 @@
-﻿namespace Sensore_Project.Models
+﻿using System;
+
+namespace Sensore_Project.Models
 {
     public class RiskPrediction
     {
@@ -6,9 +8,10 @@
 
         public double Pressure { get; set; }
 
-        public double RiskScore { get; set; }   // ← REQUIRED (fixes error)
+        // Required for calculations & unit tests
+        public double RiskScore { get; set; }
 
-        public string RiskLevel { get; set; } = string.Empty;
+        public string RiskLevel { get; set; } = "Low";
 
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     }

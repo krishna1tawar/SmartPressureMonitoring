@@ -13,31 +13,31 @@ namespace Sensore_Project.Controllers
             _logger = logger;
         }
 
-        // Default Home Page
+        // Main landing page
         public IActionResult Index()
         {
             return View();
         }
 
-        // Live Dashboard Page
+        // Live monitoring dashboard
         public IActionResult Dashboard()
         {
             return View();
         }
 
-        // Alerts Page (Anomaly History)
-        public IActionResult Alerts()
+        // Alerts / Anomalies history UI page
+        public IActionResult AlertsPage()
         {
             return View();
         }
 
-        // Privacy Page
+        // Privacy policy page
         public IActionResult Privacy()
         {
             return View();
         }
 
-        // Error Page
+        // Error page
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

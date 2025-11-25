@@ -2,23 +2,30 @@
 
 namespace Sensore_Project.Controllers
 {
-    public class Login : Controller
+    public class LoginController : Controller
     {
-        public IActionResult loginselect()
+        // Landing page where user selects their login role
+        public IActionResult Select()
         {
-            return View();
+            return View("loginselect");
         }
-        public IActionResult userlogin()
+
+        // User login page
+        public IActionResult UserLogin()
         {
-            return View();
+            return View("userlogin");
         }
-        public IActionResult clinicianlogin()
+
+        // Clinician login page
+        public IActionResult ClinicianLogin()
         {
-            return View();
+            return View("clinicianlogin");
         }
-        public IActionResult adminlogin()
+
+        // Admin login page
+        public IActionResult AdminLogin()
         {
-            return View();
+            return View("adminlogin");
         }
     }
 }
