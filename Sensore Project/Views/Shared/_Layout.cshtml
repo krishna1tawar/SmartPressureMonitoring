@@ -11,14 +11,20 @@
     <!-- Site CSS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
-    <!-- Auto styles from project -->
+    <!-- Project style auto bundle -->
     <link rel="stylesheet" href="~/Sensore_Project.styles.css" asp-append-version="true" />
 
     <style>
+        body {
+            background: #f5f6fa;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
         /* Navbar hover underline */
         .nav-link {
             position: relative;
             margin-right: 10px;
+            font-weight: 500;
         }
 
             .nav-link::after {
@@ -37,13 +43,10 @@
             }
 
         footer {
-            background: #f8f9fa;
+            background: #ffffff;
             padding: 15px 0;
-            margin-top: 50px;
-        }
-
-        body {
-            background: #f5f6fa;
+            border-top: 1px solid #ddd;
+            margin-top: 40px;
         }
     </style>
 </head>
@@ -59,9 +62,7 @@
                     Smart Pressure Monitor
                 </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#mainNav" aria-controls="mainNav"
-                        aria-expanded="false" aria-label="Toggle navigation">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
@@ -73,13 +74,19 @@
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Dashboard">
+                            <a class="nav-link text-dark" asp-controller="SensorView" asp-action="Dashboard">
                                 Dashboard
                             </a>
                         </li>
 
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Home" asp-action="Alerts">
+                            <a class="nav-link text-dark" asp-controller="SensorView" asp-action="History">
+                                Sensor History
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Alert" asp-action="Index">
                                 Alerts
                             </a>
                         </li>
@@ -97,7 +104,7 @@
         </nav>
     </header>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN BODY -->
     <div class="container mt-4">
         <main role="main" class="pb-3">
             @RenderBody()
@@ -105,9 +112,9 @@
     </div>
 
     <!-- FOOTER -->
-    <footer class="border-top text-muted">
-        <div class="container text-center">
-            &copy; 2025 - Smart Pressure Monitor |
+    <footer class="text-center text-muted">
+        <div>
+            &copy; 2025 - Smart Pressure Monitoring System |
             <a asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>

@@ -1,0 +1,60 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container mt-4">
+
+    <h2 class="fw-bold text-primary">
+        📈 Live Pressure Dashboard
+    </h2>
+    <p class="text-muted">Last 50 readings — auto updates every 5 seconds</p>
+
+    <div class="card shadow p-3 mt-3">
+        <canvas id="pressureChart" height="120"></canvas>
+    </div>
+
+</div>
+
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let chart;
+    async function loadChart() {
+
+        const res = await fetch("/api/sensordata/history?count=50");
+        const data = await res.json();
+
+        const labels = data.map(x => new Date(x.timestamp).toLocaleTimeString());
+        const pressures = data.map(x => x.pressure);
+
+        const colors = data.map(x =>
+            x.riskLevel === "High" ? "red" :
+            x.riskLevel === "Medium" ? "orange" : "green"
+        );
+
+        const ctx = document.getElementById("pressureChart");
+
+        if (chart) chart.destroy(); // refresh chart update
+
+        chart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "Pressure Reading",
+                    data: pressures,
+                    borderColor: "#007bff",
+                    tension: 0.3,
+                    pointRadius: 6,
+                    pointBackgroundColor: colors,
+                    borderWidth: 2
+                }]
+            }
+        });
+    }
+
+    loadChart();
+    setInterval(loadChart, 5000); // 🔁 auto refresh every 5 sec
+</script>

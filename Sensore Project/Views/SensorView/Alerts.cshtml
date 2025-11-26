@@ -1,0 +1,77 @@
+﻿@{
+    ViewData["Title"] = "Alerts";
+}
+
+<div class="container mt-4">
+
+    <h2 class="fw-bold text-danger">
+        🚨 Active Alerts
+    </h2>
+    <p class="text-muted">Automatically refreshing every 5 seconds</p>
+
+    <div class="card p-3 shadow mt-3">
+        <table class="table table-striped text-center align-middle" id="alertTable">
+            <thead class="table-dark">
+                <tr>
+                    <th>Pressure</th>
+                    <th>Message</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                    <th style="width:120px">Actions</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+</div>
+
+
+<script>
+    async function loadAlerts() {
+        const res = await fetch("/api/alerts");
+        const data = await res.json();
+
+        const tbody = document.querySelector("#alertTable tbody");
+        tbody.innerHTML = "";
+
+        data.forEach(a => {
+            const tr = document.createElement("tr");
+
+            if (!a.isResolved && a.pressure > 140) tr.classList.add("table-danger");
+            if (!a.isResolved && a.pressure <=140 ) tr.classList.add("table-warning");
+
+            tr.innerHTML = `
+                <td class="fw-bold">${a.pressure}</td>
+                <td>${a.message}</td>
+                <td>${new Date(a.timestamp).toLocaleString()}</td>
+                <td>
+                    ${a.isResolved
+                        ? '<span class="badge bg-success">Resolved</span>'
+                        : '<span class="badge bg-danger">Active</span>'}
+                </td>
+                <td>
+                    ${!a.isResolved
+                        ? `<button class="btn btn-sm btn-primary" onclick="resolveAlert(${a.id})">Resolve</button>`
+                        : '' }
+                    <button class="btn btn-sm btn-danger" onclick="deleteAlert(${a.id})">Delete</button>
+                </td>`;
+
+            tbody.appendChild(tr);
+        });
+    }
+
+
+    async function resolveAlert(id){
+        await fetch(`/api/alerts/resolve/${id}`, {method:"PUT"});
+        loadAlerts();
+    }
+
+    async function deleteAlert(id){
+        await fetch(`/api/alerts/${id}`, {method:"DELETE"});
+        loadAlerts();
+    }
+
+    loadAlerts();
+    setInterval(loadAlerts, 5000);   // auto refresh
+</script>
