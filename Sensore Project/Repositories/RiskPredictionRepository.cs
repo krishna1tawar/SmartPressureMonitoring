@@ -49,5 +49,30 @@ namespace Sensore_Project.Repositories
                 .OrderBy(r => r.Timestamp)
                 .ToListAsync(ct);
         }
+
+        public async Task<List<RiskPrediction>> GetByAnalysisTypeAsync(string analysisType, int count = 50, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(analysisType))
+                return new List<RiskPrediction>();
+
+            if (count <= 0) count = 50;
+            if (count > 1000) count = 1000;
+
+            return await _context.RiskPredictions
+                .AsNoTracking()
+                .Where(r => r.AnalysisType == analysisType)
+                .OrderByDescending(r => r.Timestamp)
+                .Take(count)
+                .ToListAsync(ct);
+        }
+
+        public async Task<List<RiskPrediction>> GetByPressureMapIdAsync(int pressureMapId, CancellationToken ct = default)
+        {
+            return await _context.RiskPredictions
+                .AsNoTracking()
+                .Where(r => r.PressureMapId == pressureMapId)
+                .OrderByDescending(r => r.Timestamp)
+                .ToListAsync(ct);
+        }
     }
 }

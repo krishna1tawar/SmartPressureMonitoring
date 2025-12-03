@@ -11,8 +11,6 @@ namespace Sensore_Project.Models
     {
         public double Pressure { get; set; }
 
-        // Optional – if device ever sends its own timestamp.
-        // If null, we'll use DateTime.UtcNow in the controller.
         public DateTime? Timestamp { get; set; }
     }
 }

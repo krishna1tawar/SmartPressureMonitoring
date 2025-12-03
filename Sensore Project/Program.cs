@@ -21,10 +21,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Dependency Injection (Interfaces → Implementations)
 // ------------------------------
 builder.Services.AddScoped<ISensorDataRepository, SensorDataRepository>();
+builder.Services.AddScoped<IPressureMapRepository, PressureMapRepository>();
 builder.Services.AddScoped<IAlertsRepository, AlertsRepository>();
 builder.Services.AddScoped<IRiskPredictionRepository, RiskPredictionRepository>();
 
 builder.Services.AddSingleton<IAnomalyDetectionService, AnomalyDetectionService>();
+builder.Services.AddSingleton<IPressureMapAnalysisService, PressureMapAnalysisService>();
 builder.Services.AddScoped<IRiskPredictionService, RiskPredictionService>();
 
 // ------------------------------

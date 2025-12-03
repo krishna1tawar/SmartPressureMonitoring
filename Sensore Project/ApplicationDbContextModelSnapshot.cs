@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Sensore_Project;
 
 #nullable disable
 
@@ -29,6 +30,13 @@ namespace Sensore_Project.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AlertType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClusterInfoJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsResolved")
                         .HasColumnType("bit");
 
@@ -38,6 +46,9 @@ namespace Sensore_Project.Migrations
 
                     b.Property<double>("Pressure")
                         .HasColumnType("float");
+
+                    b.Property<int?>("PressureMapId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
@@ -50,29 +61,6 @@ namespace Sensore_Project.Migrations
                     b.ToTable("Alerts");
                 });
 
-            modelBuilder.Entity("Sensore_Project.Models.Comment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CommentText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Comments");
-                });
-
             modelBuilder.Entity("Sensore_Project.Models.RiskPrediction", b =>
                 {
                     b.Property<int>("Id")
@@ -81,8 +69,18 @@ namespace Sensore_Project.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AnalysisType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("MapMetricsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<double>("Pressure")
                         .HasColumnType("float");
+
+                    b.Property<int?>("PressureMapId")
+                        .HasColumnType("int");
 
                     b.Property<string>("RiskLevel")
                         .IsRequired()
@@ -107,8 +105,17 @@ namespace Sensore_Project.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("MetricsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<double>("Pressure")
                         .HasColumnType("float");
+
+                    b.Property<string>("PressureMapJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("RequiresClinicianReview")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
@@ -116,35 +123,6 @@ namespace Sensore_Project.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SensorData");
-                });
-
-            modelBuilder.Entity("User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Users");
                 });
 #pragma warning restore 612, 618
         }

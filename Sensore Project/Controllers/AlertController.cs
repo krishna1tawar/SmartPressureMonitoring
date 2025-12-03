@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Sensore_Project.Repositories;
+using Sensore_Project.Models.DTOs;
 
 namespace Sensore_Project.Controllers
 {
@@ -7,11 +8,13 @@ namespace Sensore_Project.Controllers
     [Route("api/[controller]")]
     public class AlertsController : ControllerBase
     {
-        private readonly AlertsRepository _alertsRepo;
+        private readonly IAlertsRepository _alertsRepo;
+        private readonly IPressureMapRepository _pressureMapRepo;
 
-        public AlertsController(AlertsRepository alertsRepo)
+        public AlertsController(IAlertsRepository alertsRepo, IPressureMapRepository pressureMapRepo)
         {
             _alertsRepo = alertsRepo;
+            _pressureMapRepo = pressureMapRepo;
         }
 
         // GET: api/alerts/list
@@ -34,6 +37,48 @@ namespace Sensore_Project.Controllers
             await _alertsRepo.ResolveAsync(id);
 
             return Ok(new { message = "Alert marked as resolved." });
+        }
+
+        // NEW: api/alerts/by-type/{alertType}
+        [HttpGet("by-type/{alertType}")]
+        public async Task<IActionResult> GetAlertsByType(string alertType)
+        {
+            var alerts = await _alertsRepo.GetByTypeAsync(alertType);
+            return Ok(alerts);
+        }
+
+        // NEW: api/alerts/by-map/{pressureMapId}
+        [HttpGet("by-map/{pressureMapId:int}")]
+        public async Task<IActionResult> GetAlertsByMap(int pressureMapId)
+        {
+            var alerts = await _alertsRepo.GetByPressureMapIdAsync(pressureMapId);
+            return Ok(alerts);
+        }
+
+        // NEW: api/alerts/unresolved
+        [HttpGet("unresolved")]
+        public async Task<IActionResult> GetUnresolvedAlerts()
+        {
+            var alerts = await _alertsRepo.GetUnresolvedAsync();
+            return Ok(alerts);
+        }
+
+        // NEW: api/alerts/for-review
+        // Wraps flagged SensorData rows into a lightweight response for clinician dashboards.
+        [HttpGet("for-review")]
+        public async Task<IActionResult> GetAlertsForReview([FromQuery] int count = 100)
+        {
+            var flagged = await _pressureMapRepo.GetRequiringClinicianReviewAsync(count);
+
+            var result = flagged.Select(s => new
+            {
+                sensorDataId = s.Id,
+                timestamp = s.Timestamp,
+                requiresClinicianReview = s.RequiresClinicianReview,
+                metrics = s.Metrics
+            });
+
+            return Ok(result);
         }
     }
 }

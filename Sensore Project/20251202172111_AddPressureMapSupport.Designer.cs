@@ -3,16 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Sensore_Project;
 
 #nullable disable
 
 namespace Sensore_Project.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251202172111_AddPressureMapSupport")]
+    partial class AddPressureMapSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -31,8 +35,7 @@ namespace Sensore_Project.Migrations
 
                     b.Property<string>("AlertType")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ClusterInfoJson")
                         .HasColumnType("nvarchar(max)");
@@ -58,34 +61,7 @@ namespace Sensore_Project.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AlertType", "Timestamp");
-
-                    b.HasIndex("PressureMapId");
-
                     b.ToTable("Alerts");
-                });
-
-            modelBuilder.Entity("Sensore_Project.Models.Comment", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("CommentText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("Sensore_Project.Models.RiskPrediction", b =>
@@ -98,8 +74,7 @@ namespace Sensore_Project.Migrations
 
                     b.Property<string>("AnalysisType")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MapMetricsJson")
                         .HasColumnType("nvarchar(max)");
@@ -121,10 +96,6 @@ namespace Sensore_Project.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AnalysisType", "Timestamp");
-
-                    b.HasIndex("PressureMapId");
 
                     b.ToTable("RiskPredictions");
                 });
@@ -154,54 +125,7 @@ namespace Sensore_Project.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RequiresClinicianReview", "Timestamp");
-
                     b.ToTable("SensorData");
-                });
-
-            modelBuilder.Entity("User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("Sensore_Project.Models.Alert", b =>
-                {
-                    b.HasOne("Sensore_Project.Models.SensorData", null)
-                        .WithMany()
-                        .HasForeignKey("PressureMapId")
-                        .OnDelete(DeleteBehavior.SetNull);
-                });
-
-            modelBuilder.Entity("Sensore_Project.Models.RiskPrediction", b =>
-                {
-                    b.HasOne("Sensore_Project.Models.SensorData", null)
-                        .WithMany()
-                        .HasForeignKey("PressureMapId")
-                        .OnDelete(DeleteBehavior.SetNull);
                 });
 #pragma warning restore 612, 618
         }
