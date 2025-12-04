@@ -1,0 +1,752 @@
+@{
+    ViewData["Title"] = "Alerts Dashboard";
+}
+
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">🚨 Alerts Dashboard</h2>
+
+    <!-- Filter Bar -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <!-- Time Range Buttons -->
+                <div class="col-auto">
+                    <label class="form-label fw-bold mb-1">Time Range</label>
+                    <div class="btn-group" role="group" id="timeRangeGroup">
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-range="1h">1H</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-range="6h">6H</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm active" data-range="24h">24H</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-range="7d">7D</button>
+                    </div>
+                </div>
+
+                <!-- Alert Type Filter -->
+                <div class="col-auto">
+                    <label class="form-label fw-bold mb-1">Type</label>
+                    <select class="form-select form-select-sm" id="alertTypeFilter">
+                        <option value="all">All Types</option>
+                        <option value="PressureAnomaly">Pressure Anomaly</option>
+                        <option value="SustainedPressure">Sustained Pressure</option>
+                        <option value="HighPressureCluster">High Pressure Cluster</option>
+                    </select>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-auto">
+                    <label class="form-label fw-bold mb-1">Status</label>
+                    <select class="form-select form-select-sm" id="alertStatusFilter">
+                        <option value="all">All</option>
+                        <option value="active">Active</option>
+                        <option value="resolved">Resolved</option>
+                    </select>
+                </div>
+
+                <!-- Scan Button -->
+                <div class="col-auto">
+                    <button class="btn btn-warning btn-sm" id="scanBtn">
+                        🔍 Scan for Alerts
+                    </button>
+                </div>
+
+                <!-- Refresh Button -->
+                <div class="col-auto ms-auto">
+                    <button class="btn btn-primary btn-sm" id="refreshBtn">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="scanStatus" class="alert alert-info d-none mt-3 mb-0" role="status">
+                <span id="scanStatusText">Preparing scan...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content: Two Column Layout -->
+    <div class="row">
+        <!-- Left Column: Chart + Table -->
+        <div class="col-lg-8">
+            <!-- Line Chart Card -->
+            <div class="card mb-4 shadow-sm border-0">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <span>Alert Trend</span>
+                    <small id="chartTimeRange">Last 24 Hours</small>
+                </div>
+                <div class="card-body">
+                    <canvas id="alertTrendChart" height="120"></canvas>
+                </div>
+            </div>
+
+            <!-- Alerts Table Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-danger text-white">
+                    📋 Alerts List
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover" id="alertsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Type</th>
+                                <th>Pressure</th>
+                                <th>Timestamp</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertsTableBody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                    <div id="noAlertsMessage" class="text-muted text-center d-none">
+                        No alerts found for the selected filters.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Summary Sidebar -->
+        <div class="col-lg-4">
+            <!-- Total Alerts Card -->
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Alerts</h6>
+                    <h2 id="statTotal" class="fw-bold text-primary">0</h2>
+                </div>
+            </div>
+
+            <!-- Active vs Resolved Card -->
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted text-center mb-3">Status Breakdown</h6>
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <h4 id="statActive" class="fw-bold text-danger">0</h4>
+                            <small class="text-muted">Active</small>
+                        </div>
+                        <div class="col-6">
+                            <h4 id="statResolved" class="fw-bold text-success">0</h4>
+                            <small class="text-muted">Resolved</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Max Pressure Card -->
+            <div class="card mb-3 shadow-sm border-0">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Highest Pressure</h6>
+                    <h3 id="statMaxPressure" class="fw-bold text-warning">0 PSI</h3>
+                </div>
+            </div>
+
+            <!-- By Type Card (Mini Donut) -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-secondary text-white">
+                    Alerts by Type
+                </div>
+                <div class="card-body">
+                    <canvas id="alertTypeChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Detail Modal -->
+<div class="modal fade" id="alertDetailModal" tabindex="-1" aria-labelledby="alertDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="alertDetailModalLabel">Alert Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Alert Info -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>ID:</strong> <span id="modalAlertId">-</span></p>
+                        <p><strong>Type:</strong> <span id="modalAlertType">-</span></p>
+                        <p><strong>Pressure:</strong> <span id="modalAlertPressure">-</span> PSI</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Timestamp:</strong> <span id="modalAlertTimestamp">-</span></p>
+                        <p><strong>Status:</strong> <span id="modalAlertStatus">-</span></p>
+                        <p><strong>Map ID:</strong> <span id="modalAlertMapId">-</span></p>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <p><strong>Message:</strong> <span id="modalAlertMessage">-</span></p>
+                </div>
+
+                <!-- Pressure Map Heatmap -->
+                <div id="heatmapContainer" class="mb-3 d-none">
+                    <h6 class="fw-bold">Pressure Map Heatmap</h6>
+                    <div class="d-flex align-items-start">
+                        <canvas id="heatmapCanvas" width="320" height="320" style="border: 1px solid #ddd;"></canvas>
+                        <div class="ms-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <div style="width: 20px; height: 150px; background: linear-gradient(to bottom, #ff0000, #ffff00, #00ff00, #0000ff);"></div>
+                                <div class="ms-2 d-flex flex-column justify-content-between" style="height: 150px;">
+                                    <small>255</small>
+                                    <small>192</small>
+                                    <small>128</small>
+                                    <small>64</small>
+                                    <small>0</small>
+                                </div>
+                            </div>
+                            <small class="text-muted" id="heatmapUnit">mmHg</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="noHeatmapMessage" class="text-muted d-none">
+                    No pressure map data available for this alert.
+                </div>
+
+                <!-- Cluster Info -->
+                <div id="clusterInfoContainer" class="d-none">
+                    <h6 class="fw-bold">Cluster Information</h6>
+                    <div id="clusterInfoContent"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="modalResolveBtn">Resolve Alert</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // State
+    let currentFilters = {
+        range: '24h',
+        type: 'all',
+        status: 'all'
+    };
+    let alertTrendChart = null;
+    let alertTypeChart = null;
+    let currentAlertId = null;
+
+    // DOM Elements
+    const timeRangeButtons = document.querySelectorAll('#timeRangeGroup button');
+    const alertTypeFilter = document.getElementById('alertTypeFilter');
+    const alertStatusFilter = document.getElementById('alertStatusFilter');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const scanBtn = document.getElementById('scanBtn');
+    const scanStatus = document.getElementById('scanStatus');
+    const scanStatusText = document.getElementById('scanStatusText');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        setupEventListeners();
+        loadDashboard();
+    });
+
+    function setupEventListeners() {
+        timeRangeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                timeRangeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilters.range = btn.dataset.range;
+                loadDashboard();
+            });
+        });
+
+        alertTypeFilter.addEventListener('change', () => {
+            currentFilters.type = alertTypeFilter.value;
+            loadDashboard();
+        });
+
+        alertStatusFilter.addEventListener('change', () => {
+            currentFilters.status = alertStatusFilter.value;
+            loadDashboard();
+        });
+
+        refreshBtn.addEventListener('click', loadDashboard);
+
+        if (scanBtn) {
+            scanBtn.addEventListener('click', scanForAlerts);
+        }
+
+        document.getElementById('modalResolveBtn').addEventListener('click', resolveCurrentAlert);
+    }
+
+    function showScanStatus(message, variant = 'info') {
+        if (!scanStatus) return;
+
+        scanStatus.classList.remove('d-none', 'alert-info', 'alert-success', 'alert-warning', 'alert-danger');
+        scanStatus.classList.add(`alert-${variant}`);
+        scanStatusText.textContent = message;
+    }
+
+    function hideScanStatus() {
+        if (!scanStatus) return;
+
+        scanStatus.classList.add('d-none');
+    }
+
+    function getTimeRange() {
+        const now = new Date();
+        let start;
+        let bucket = 'hour';
+        let label = '';
+
+        switch (currentFilters.range) {
+            case '1h':
+                start = new Date(now.getTime() - 60 * 60 * 1000);
+                label = 'Last 1 Hour';
+                break;
+            case '6h':
+                start = new Date(now.getTime() - 6 * 60 * 60 * 1000);
+                label = 'Last 6 Hours';
+                break;
+            case '24h':
+                start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                label = 'Last 24 Hours';
+                break;
+            case '7d':
+                start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                bucket = 'day';
+                label = 'Last 7 Days';
+                break;
+            default:
+                start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                label = 'Last 24 Hours';
+        }
+
+        document.getElementById('chartTimeRange').textContent = label;
+        return { start, end: now, bucket };
+    }
+
+    async function loadDashboard() {
+        await Promise.all([
+            loadStats(),
+            loadTrend(),
+            loadAlerts()
+        ]);
+    }
+
+    async function scanForAlerts() {
+        if (!scanBtn) return;
+
+        scanBtn.disabled = true;
+        const originalLabel = scanBtn.innerHTML;
+        scanBtn.innerHTML = '⏳ Scanning...';
+        showScanStatus('Scanning pressure maps for alerts. This may take a moment.', 'info');
+
+        try {
+            const response = await fetch('/api/alerts/scan', { method: 'POST' });
+            if (!response.ok) {
+                throw new Error(`Scan failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            const summary = result.message ?? `Scan complete: ${result.alertsCreated} alert(s) created.`;
+            const variant = result.errors > 0 ? 'warning' : 'success';
+            showScanStatus(summary, variant);
+
+            await loadDashboard();
+
+            if (result.errors > 0 && result.errorMessages?.length) {
+                console.warn('Scan completed with errors:', result.errorMessages);
+            }
+        } catch (err) {
+            console.error('Failed to scan for alerts', err);
+            showScanStatus('Scan failed. Please try again.', 'danger');
+        } finally {
+            scanBtn.disabled = false;
+            scanBtn.innerHTML = originalLabel;
+        }
+    }
+
+    async function loadStats() {
+        const { start, end } = getTimeRange();
+        const params = new URLSearchParams({
+            start: start.toISOString(),
+            end: end.toISOString()
+        });
+
+        try {
+            const response = await fetch(`/api/alerts/stats?${params}`);
+            if (!response.ok) return;
+
+            const stats = await response.json();
+
+            document.getElementById('statTotal').textContent = stats.total;
+            document.getElementById('statActive').textContent = stats.active;
+            document.getElementById('statResolved').textContent = stats.resolved;
+            document.getElementById('statMaxPressure').textContent = 
+                stats.maxPressure > 0 ? `${stats.maxPressure.toFixed(1)} PSI` : '- PSI';
+
+            updateTypeChart(stats.byType);
+        } catch (err) {
+            console.error('Failed to load stats', err);
+        }
+    }
+
+    async function loadTrend() {
+        const { start, end, bucket } = getTimeRange();
+        const params = new URLSearchParams({
+            start: start.toISOString(),
+            end: end.toISOString(),
+            bucket: bucket
+        });
+
+        try {
+            const response = await fetch(`/api/alerts/trend?${params}`);
+            if (!response.ok) return;
+
+            const data = await response.json();
+            updateTrendChart(data.dataPoints, bucket);
+        } catch (err) {
+            console.error('Failed to load trend', err);
+        }
+    }
+
+    async function loadAlerts() {
+        const { start, end } = getTimeRange();
+        const params = new URLSearchParams({
+            start: start.toISOString(),
+            end: end.toISOString()
+        });
+
+        if (currentFilters.type !== 'all') {
+            params.append('type', currentFilters.type);
+        }
+        if (currentFilters.status !== 'all') {
+            params.append('status', currentFilters.status);
+        }
+
+        try {
+            const response = await fetch(`/api/alerts/filtered?${params}`);
+            if (!response.ok) return;
+
+            const alerts = await response.json();
+            updateAlertsTable(alerts);
+        } catch (err) {
+            console.error('Failed to load alerts', err);
+        }
+    }
+
+    function updateTrendChart(dataPoints, bucket) {
+        const ctx = document.getElementById('alertTrendChart').getContext('2d');
+
+        const labels = dataPoints.map(p => {
+            const d = new Date(p.timestamp);
+            return bucket === 'day' 
+                ? d.toLocaleDateString() 
+                : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        });
+
+        const values = dataPoints.map(p => p.count);
+
+        // Threshold line (configurable)
+        const threshold = 5;
+
+        if (alertTrendChart) {
+            alertTrendChart.destroy();
+        }
+
+        alertTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Alert Count',
+                        data: values,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Threshold',
+                        data: Array(labels.length).fill(threshold),
+                        borderColor: '#ffc107',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateTypeChart(byType) {
+        const ctx = document.getElementById('alertTypeChart').getContext('2d');
+
+        const labels = Object.keys(byType);
+        const values = Object.values(byType);
+
+        if (alertTypeChart) {
+            alertTypeChart.destroy();
+        }
+
+        if (labels.length === 0) {
+            return;
+        }
+
+        alertTypeChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: ['#dc3545', '#ffc107', '#0d6efd', '#198754', '#6c757d']
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 12,
+                            font: { size: 10 }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateAlertsTable(alerts) {
+        const tbody = document.getElementById('alertsTableBody');
+        const noAlertsMsg = document.getElementById('noAlertsMessage');
+
+        tbody.innerHTML = '';
+
+        if (alerts.length === 0) {
+            noAlertsMsg.classList.remove('d-none');
+            return;
+        }
+
+        noAlertsMsg.classList.add('d-none');
+
+        alerts.forEach(alert => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+
+            if (!alert.isResolved) {
+                tr.classList.add('table-warning');
+            }
+
+            tr.innerHTML = `
+                <td>${alert.id}</td>
+                <td><span class="badge bg-info">${alert.alertType}</span></td>
+                <td>${alert.pressure.toFixed(1)}</td>
+                <td>${new Date(alert.timestamp).toLocaleString()}</td>
+                <td>
+                    ${alert.isResolved 
+                        ? '<span class="badge bg-success">Resolved</span>' 
+                        : '<span class="badge bg-danger">Active</span>'}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary view-btn" data-id="${alert.id}">View</button>
+                    ${!alert.isResolved 
+                        ? `<button class="btn btn-sm btn-outline-success resolve-btn" data-id="${alert.id}">Resolve</button>` 
+                        : ''}
+                </td>
+            `;
+
+            // Row click opens modal
+            tr.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('btn')) {
+                    openAlertDetail(alert.id);
+                }
+            });
+
+            tbody.appendChild(tr);
+        });
+
+        // Attach button handlers
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                openAlertDetail(btn.dataset.id);
+            });
+        });
+
+        document.querySelectorAll('.resolve-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                await resolveAlert(btn.dataset.id);
+            });
+        });
+    }
+
+    async function openAlertDetail(id) {
+        currentAlertId = id;
+
+        try {
+            const response = await fetch(`/api/alerts/${id}/detail`);
+            if (!response.ok) {
+                alert('Failed to load alert details');
+                return;
+            }
+
+            const detail = await response.json();
+            populateModal(detail);
+
+            const modal = new bootstrap.Modal(document.getElementById('alertDetailModal'));
+            modal.show();
+        } catch (err) {
+            console.error('Failed to load alert detail', err);
+        }
+    }
+
+    function populateModal(detail) {
+        document.getElementById('modalAlertId').textContent = detail.id;
+        document.getElementById('modalAlertType').textContent = detail.alertType;
+        document.getElementById('modalAlertPressure').textContent = detail.pressure.toFixed(1);
+        document.getElementById('modalAlertTimestamp').textContent = new Date(detail.timestamp).toLocaleString();
+        document.getElementById('modalAlertStatus').innerHTML = detail.isResolved 
+            ? '<span class="badge bg-success">Resolved</span>' 
+            : '<span class="badge bg-danger">Active</span>';
+        document.getElementById('modalAlertMapId').textContent = detail.pressureMapId ?? '-';
+        document.getElementById('modalAlertMessage').textContent = detail.message;
+
+        // Show/hide resolve button
+        document.getElementById('modalResolveBtn').style.display = detail.isResolved ? 'none' : 'block';
+
+        // Heatmap
+        const heatmapContainer = document.getElementById('heatmapContainer');
+        const noHeatmapMsg = document.getElementById('noHeatmapMessage');
+
+        if (detail.pressureMapMatrix && detail.pressureMapMatrix.length === 32) {
+            heatmapContainer.classList.remove('d-none');
+            noHeatmapMsg.classList.add('d-none');
+            document.getElementById('heatmapUnit').textContent = detail.mapUnit ?? 'mmHg';
+            drawHeatmap(detail.pressureMapMatrix);
+        } else {
+            heatmapContainer.classList.add('d-none');
+            noHeatmapMsg.classList.remove('d-none');
+        }
+
+        // Cluster info
+        const clusterContainer = document.getElementById('clusterInfoContainer');
+        const clusterContent = document.getElementById('clusterInfoContent');
+
+        if (detail.clusterInfo) {
+            const totalClusters = detail.clusterInfo.totalClusters ?? '-';
+            const totalPixels = detail.clusterInfo.totalHighPressurePixels ?? '-';
+            const clusters = Array.isArray(detail.clusterInfo.clusters) ? detail.clusterInfo.clusters : [];
+
+            clusterContainer.classList.remove('d-none');
+
+            const summaryHtml = `
+                <p><strong>Total clusters:</strong> ${totalClusters}</p>
+                <p><strong>Total high-pressure pixels:</strong> ${totalPixels}</p>
+            `;
+
+            const listHtml = clusters.length
+                ? `<div class="cluster-list">
+                        ${clusters.map((cluster, index) => `
+                            <div class="cluster-card">
+                                <h6 class="mb-1">Cluster ${cluster.clusterId ?? index + 1}</h6>
+                                <p class="mb-1"><strong>Pixels:</strong> ${cluster.pixelCount ?? '-'}</p>
+                                <p class="mb-1"><strong>Max pressure:</strong> ${cluster.maxPressure ?? '-'}</p>
+                                <p class="mb-0"><strong>Avg pressure:</strong> ${typeof cluster.avgPressure === 'number' ? cluster.avgPressure.toFixed(1) : '-'}</p>
+                            </div>
+                        `).join('')}
+                    </div>`
+                : '<p class="text-muted">No individual cluster details available.</p>';
+
+            clusterContent.innerHTML = summaryHtml + listHtml;
+        } else {
+            clusterContainer.classList.add('d-none');
+            clusterContent.innerHTML = '';
+        }
+    }
+
+    function drawHeatmap(matrix) {
+        const canvas = document.getElementById('heatmapCanvas');
+        const ctx = canvas.getContext('2d');
+        const cellSize = 10; // 320 / 32 = 10
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let y = 0; y < 32; y++) {
+            for (let x = 0; x < 32; x++) {
+                const value = matrix[y][x];
+                ctx.fillStyle = valueToColor(value);
+                ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+            }
+        }
+    }
+
+    function valueToColor(value) {
+        // Map 0-255 to blue -> green -> yellow -> red
+        const normalized = Math.min(255, Math.max(0, value)) / 255;
+
+        let r, g, b;
+
+        if (normalized < 0.25) {
+            // Blue to Cyan
+            const t = normalized / 0.25;
+            r = 0;
+            g = Math.round(255 * t);
+            b = 255;
+        } else if (normalized < 0.5) {
+            // Cyan to Green
+            const t = (normalized - 0.25) / 0.25;
+            r = 0;
+            g = 255;
+            b = Math.round(255 * (1 - t));
+        } else if (normalized < 0.75) {
+            // Green to Yellow
+            const t = (normalized - 0.5) / 0.25;
+            r = Math.round(255 * t);
+            g = 255;
+            b = 0;
+        } else {
+            // Yellow to Red
+            const t = (normalized - 0.75) / 0.25;
+            r = 255;
+            g = Math.round(255 * (1 - t));
+            b = 0;
+        }
+
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    async function resolveAlert(id) {
+        try {
+            const response = await fetch(`/api/alerts/resolve/${id}`, { method: 'POST' });
+            if (response.ok) {
+                loadDashboard();
+            }
+        } catch (err) {
+            console.error('Failed to resolve alert', err);
+        }
+    }
+
+    async function resolveCurrentAlert() {
+        if (currentAlertId) {
+            await resolveAlert(currentAlertId);
+            bootstrap.Modal.getInstance(document.getElementById('alertDetailModal')).hide();
+        }
+    }
+</script>

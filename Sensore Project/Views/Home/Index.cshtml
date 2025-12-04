@@ -5,6 +5,36 @@
 <div class="container mt-4">
     <h2 class="text-center mb-4">📊 Smart Pressure Monitoring Dashboard</h2>
 
+    <!-- Pressure Map Import Controls -->
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+            <span>Pressure Map Data Import</span>
+            <button id="importStartBtn" class="btn btn-light btn-sm">Start Import</button>
+        </div>
+        <div class="card-body">
+            <div id="importStatusIdle" class="text-muted small">No import running.</div>
+
+            <div id="importStatusActive" class="d-none">
+                <div class="mb-2">
+                    <strong>Status:</strong> <span id="importStatusText">Pending</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Files:</strong> <span id="importFilesProcessed">0</span>/<span id="importFilesTotal">0</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Maps:</strong> <span id="importMapsProcessed">0</span>/<span id="importMapsTotal">0</span>
+                </div>
+                <div class="mb-2">
+                    <strong>Current File:</strong> <span id="importCurrentFile">-</span>
+                </div>
+                <div class="progress" role="progressbar" aria-label="Import progress">
+                    <div id="importProgressBar" class="progress-bar" style="width: 0%"></div>
+                </div>
+                <div id="importError" class="text-danger small mt-2 d-none"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Latest Pressure Trend -->
     <div class="card mb-4 shadow-sm border-0">
         <div class="card-header bg-primary text-white">
@@ -40,10 +70,29 @@
 
 <script>
     let chart;
+    let importPollingHandle = null;
+    const importPollingIntervalMs = 5000;
+
+    const importElements = {
+        button: document.getElementById('importStartBtn'),
+        idleText: document.getElementById('importStatusIdle'),
+        activeBlock: document.getElementById('importStatusActive'),
+        statusText: document.getElementById('importStatusText'),
+        filesProcessed: document.getElementById('importFilesProcessed'),
+        filesTotal: document.getElementById('importFilesTotal'),
+        mapsProcessed: document.getElementById('importMapsProcessed'),
+        mapsTotal: document.getElementById('importMapsTotal'),
+        currentFile: document.getElementById('importCurrentFile'),
+        progressBar: document.getElementById('importProgressBar'),
+        error: document.getElementById('importError')
+    };
+
+    importElements.button.addEventListener('click', startImport);
 
     async function loadDashboard() {
         await loadLatestReadings();
         await loadAlerts();
+        await loadImportStatus();
     }
 
     // ============================
@@ -86,6 +135,120 @@
             }
 
             chart.update();
+        }
+    }
+
+    // ============================
+    // Import job helpers
+    // ============================
+    async function startImport() {
+        toggleImportButton(true);
+        importElements.error.classList.add('d-none');
+
+        try {
+            const response = await fetch('/api/import/start', {
+                method: 'POST'
+            });
+
+            if (response.status === 409) {
+                const conflict = await response.json();
+                await loadImportStatus(conflict.jobId);
+            } else if (response.ok) {
+                const data = await response.json();
+                updateImportStatus(data);
+                startImportPolling(data.id);
+            } else {
+                importElements.error.textContent = 'Unable to start import (HTTP ' + response.status + ').';
+                importElements.error.classList.remove('d-none');
+            }
+        } catch (err) {
+            importElements.error.textContent = 'Error starting import: ' + err.message;
+            importElements.error.classList.remove('d-none');
+        } finally {
+            toggleImportButton(false);
+        }
+    }
+
+    function toggleImportButton(disabled) {
+        importElements.button.disabled = disabled;
+    }
+
+    async function loadImportStatus(jobId = null) {
+        try {
+            const url = jobId ? `/api/import/status/${jobId}` : '/api/import/status';
+            const response = await fetch(url);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    resetImportUI();
+                }
+                return;
+            }
+
+            const status = await response.json();
+            updateImportStatus(status);
+
+            if (isJobActive(status.status)) {
+                startImportPolling(status.id);
+            } else {
+                stopImportPolling();
+            }
+        } catch (err) {
+            console.error('Failed to load import status', err);
+        }
+    }
+
+    function updateImportStatus(status) {
+        importElements.idleText.classList.add('d-none');
+        importElements.activeBlock.classList.remove('d-none');
+
+        importElements.statusText.textContent = status.status;
+        importElements.filesProcessed.textContent = status.processedFiles ?? 0;
+        importElements.filesTotal.textContent = status.totalFiles ?? 0;
+        importElements.mapsProcessed.textContent = status.processedMaps ?? 0;
+        importElements.mapsTotal.textContent = status.totalMaps ?? 0;
+        importElements.currentFile.textContent = status.currentFileName ?? '—';
+
+        const totalMaps = status.totalMaps ?? 0;
+        const processedMaps = status.processedMaps ?? 0;
+        const percent = totalMaps > 0 ? Math.min(100, Math.round((processedMaps / totalMaps) * 100)) : 0;
+        importElements.progressBar.style.width = `${percent}%`;
+        importElements.progressBar.textContent = `${percent}%`;
+
+        if (status.errorMessage) {
+            importElements.error.textContent = status.errorMessage;
+            importElements.error.classList.remove('d-none');
+        } else {
+            importElements.error.classList.add('d-none');
+        }
+
+        if (!isJobActive(status.status)) {
+            importElements.button.disabled = false;
+        }
+    }
+
+    function resetImportUI() {
+        importElements.activeBlock.classList.add('d-none');
+        importElements.idleText.classList.remove('d-none');
+        importElements.progressBar.style.width = '0%';
+        importElements.progressBar.textContent = '';
+        importElements.currentFile.textContent = '-';
+        importElements.error.classList.add('d-none');
+        toggleImportButton(false);
+    }
+
+    function isJobActive(status) {
+        return status === 'Pending' || status === 'Processing';
+    }
+
+    function startImportPolling(jobId) {
+        stopImportPolling();
+        importPollingHandle = setInterval(() => loadImportStatus(jobId), importPollingIntervalMs);
+    }
+
+    function stopImportPolling() {
+        if (importPollingHandle) {
+            clearInterval(importPollingHandle);
+            importPollingHandle = null;
         }
     }
 

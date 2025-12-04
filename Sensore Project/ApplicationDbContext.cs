@@ -13,5 +13,6 @@ namespace Sensore_Project
         public DbSet<SensorData> SensorData { get; set; }
         public DbSet<Alert> Alerts { get; set; }
         public DbSet<RiskPrediction> RiskPredictions { get; set; }
+        public DbSet<ImportJob> ImportJobs { get; set; }
     }
 }

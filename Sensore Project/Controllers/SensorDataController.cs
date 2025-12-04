@@ -79,18 +79,6 @@ namespace Sensore_Project.Controllers
             var anomaly = _anomalyService.CheckPressure(latest.Pressure);
             var risk = ComputeRisk(latest.Pressure, anomaly.Score);
 
-            if (anomaly.IsAnomaly)
-            {
-                await _alertsRepo.AddAsync(new Alert
-                {
-                    UserId = 1,
-                    Message = "Pressure anomaly detected",
-                    Pressure = latest.Pressure,
-                    Timestamp = DateTime.Now,
-                    IsResolved = false
-                });
-            }
-
             return Ok(new
             {
                 pressure = latest.Pressure,

@@ -24,10 +24,14 @@ builder.Services.AddScoped<ISensorDataRepository, SensorDataRepository>();
 builder.Services.AddScoped<IPressureMapRepository, PressureMapRepository>();
 builder.Services.AddScoped<IAlertsRepository, AlertsRepository>();
 builder.Services.AddScoped<IRiskPredictionRepository, RiskPredictionRepository>();
+builder.Services.AddScoped<IImportJobRepository, ImportJobRepository>();
+builder.Services.AddScoped<IPressureMapAlertScanner, PressureMapAlertScanner>();
 
 builder.Services.AddSingleton<IAnomalyDetectionService, AnomalyDetectionService>();
 builder.Services.AddSingleton<IPressureMapAnalysisService, PressureMapAnalysisService>();
 builder.Services.AddScoped<IRiskPredictionService, RiskPredictionService>();
+builder.Services.AddSingleton<ICsvPressureMapParser, CsvPressureMapParser>();
+builder.Services.AddHostedService<PressureMapImportWorker>();
 
 // ------------------------------
 // Swagger

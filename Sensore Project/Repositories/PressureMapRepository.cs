@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using Sensore_Project.Models;
 
 namespace Sensore_Project.Repositories
@@ -16,6 +17,14 @@ namespace Sensore_Project.Repositories
             _context = context;
         }
 
+        public async Task<SensorData?> GetLatestAsync()
+        {
+            return await _context.SensorData
+                .AsNoTracking()
+                .OrderByDescending(s => s.Timestamp)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<SensorData?> GetLatestWithMapAsync()
         {
             return await _context.SensorData
@@ -23,6 +32,13 @@ namespace Sensore_Project.Repositories
                 .Where(s => s.PressureMapJson != null)
                 .OrderByDescending(s => s.Timestamp)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<SensorData?> GetByIdAsync(int id)
+        {
+            return await _context.SensorData
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task<List<SensorData>> GetRecentWithMapsAsync(int count = 100)
@@ -89,6 +105,31 @@ namespace Sensore_Project.Repositories
             row.RequiresClinicianReview = true;
             row.Metrics = metrics;
 
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<SensorData>> GetMapsNeedingAlertScanAsync(int batchSize = 100)
+        {
+            if (batchSize <= 0) batchSize = 100;
+            if (batchSize > 1000) batchSize = 1000;
+
+            return await _context.SensorData
+                .AsNoTracking()
+                .Where(s => s.PressureMapJson != null &&
+                            (s.MetricsJson == null ||
+                             !EF.Functions.Like(s.MetricsJson, "%\"HasBeenScanned\":true%")))
+                .OrderBy(s => s.Timestamp)
+                .Take(batchSize)
+                .ToListAsync();
+        }
+
+        public async Task UpdateMetricsAsync(int id, PressureMetrics metrics)
+        {
+            var row = await _context.SensorData.FindAsync(id);
+            if (row == null)
+                return;
+
+            row.Metrics = metrics;
             await _context.SaveChangesAsync();
         }
     }

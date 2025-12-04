@@ -11,6 +11,7 @@ namespace Sensore_Project.Models
         public string RiskLevel { get; set; } = "Low";
         public bool AlertGenerated { get; set; }
         public DateTime? AlertTimestamp { get; set; }
+        public bool HasBeenScanned { get; set; }
     }
 
     public class HighPressureCluster

@@ -8,7 +8,9 @@ namespace Sensore_Project.Repositories
     /// </summary>
     public interface IPressureMapRepository
     {
+        Task<SensorData?> GetLatestAsync();
         Task<SensorData?> GetLatestWithMapAsync();
+        Task<SensorData?> GetByIdAsync(int id);
         Task<List<SensorData>> GetRecentWithMapsAsync(int count = 100);
         Task<List<SensorData>> GetByDateRangeWithMapsAsync(DateTime start, DateTime end);
         Task<List<SensorData>> GetRequiringClinicianReviewAsync(int count = 100);
@@ -21,6 +23,16 @@ namespace Sensore_Project.Repositories
         /// Flags a given SensorData row for clinician review and stores pre-computed metrics.
         /// </summary>
         Task FlagForClinicianReviewAsync(int id, PressureMetrics metrics);
+
+        /// <summary>
+        /// Gets maps that need alert scanning (have PressureMapJson but no AlertGenerated flag set).
+        /// </summary>
+        Task<List<SensorData>> GetMapsNeedingAlertScanAsync(int batchSize = 100);
+
+        /// <summary>
+        /// Updates the metrics for a sensor data row after scanning.
+        /// </summary>
+        Task UpdateMetricsAsync(int id, PressureMetrics metrics);
     }
 }
 
