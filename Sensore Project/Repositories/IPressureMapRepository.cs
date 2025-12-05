@@ -35,5 +35,3 @@ namespace Sensore_Project.Repositories
         Task UpdateMetricsAsync(int id, PressureMetrics metrics);
     }
 }
-
-

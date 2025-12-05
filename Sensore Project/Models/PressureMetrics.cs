@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace Sensore_Project.Models
 {
+    /// <summary>
+    /// Metrics computed from pressure map analysis.
+    /// </summary>
     public class PressureMetrics
     {
         public List<HighPressureCluster> HighPressureClusters { get; set; } = new();
@@ -14,6 +17,9 @@ namespace Sensore_Project.Models
         public bool HasBeenScanned { get; set; }
     }
 
+    /// <summary>
+    /// Represents a contiguous region of high-pressure pixels.
+    /// </summary>
     public class HighPressureCluster
     {
         public int ClusterId { get; set; }
@@ -24,6 +30,9 @@ namespace Sensore_Project.Models
         public Point Centroid { get; set; } = new();
     }
 
+    /// <summary>
+    /// Rectangular bounds of a cluster.
+    /// </summary>
     public class BoundingBox
     {
         public int MinX { get; set; }
@@ -32,11 +41,12 @@ namespace Sensore_Project.Models
         public int MaxY { get; set; }
     }
 
+    /// <summary>
+    /// 2D point coordinates.
+    /// </summary>
     public class Point
     {
         public double X { get; set; }
         public double Y { get; set; }
     }
 }
-
-

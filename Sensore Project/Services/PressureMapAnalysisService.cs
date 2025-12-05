@@ -209,5 +209,3 @@ namespace Sensore_Project.Services
         }
     }
 }
-
-

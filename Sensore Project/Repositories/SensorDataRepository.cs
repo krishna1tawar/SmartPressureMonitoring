@@ -3,6 +3,9 @@ using Sensore_Project.Models;
 
 namespace Sensore_Project.Repositories
 {
+    /// <summary>
+    /// Repository for managing sensor data records in the database.
+    /// </summary>
     public class SensorDataRepository : ISensorDataRepository
     {
         private readonly ApplicationDbContext _context;
@@ -12,6 +15,9 @@ namespace Sensore_Project.Repositories
             _context = context;
         }
 
+        /// <summary>
+        /// Gets the most recent sensor data record.
+        /// </summary>
         public async Task<SensorData?> GetLatestAsync()
         {
             return await _context.SensorData
@@ -20,6 +26,9 @@ namespace Sensore_Project.Repositories
                 .FirstOrDefaultAsync();
         }
 
+        /// <summary>
+        /// Gets the most recent sensor data records up to the specified count.
+        /// </summary>
         public async Task<List<SensorData>> GetRecentAsync(int count = 100)
         {
             return await _context.SensorData
@@ -29,6 +38,9 @@ namespace Sensore_Project.Repositories
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Gets sensor data records within a date range.
+        /// </summary>
         public async Task<List<SensorData>> GetByDateRangeAsync(DateTime start, DateTime end)
         {
             return await _context.SensorData
@@ -38,6 +50,9 @@ namespace Sensore_Project.Repositories
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Gets sensor data records for a specific date.
+        /// </summary>
         public async Task<List<SensorData>> GetByDateAsync(DateTime date)
         {
             return await _context.SensorData
@@ -47,18 +62,27 @@ namespace Sensore_Project.Repositories
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Adds a new sensor data record.
+        /// </summary>
         public async Task AddAsync(SensorData entity)
         {
             await _context.SensorData.AddAsync(entity);
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Adds multiple sensor data records in a batch.
+        /// </summary>
         public async Task AddRangeAsync(IEnumerable<SensorData> list)
         {
             await _context.SensorData.AddRangeAsync(list);
             await _context.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Updates an existing sensor data record.
+        /// </summary>
         public async Task UpdateAsync(SensorData entity)
         {
             _context.SensorData.Update(entity);

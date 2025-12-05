@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using Sensore_Project.Models;
 
@@ -15,6 +16,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<List<Alert>> GetAllAsync()
         {
+            // Fetching all alerts
             return await _context.Alerts
                 .AsNoTracking()
                 .OrderByDescending(a => a.Timestamp)
@@ -23,19 +25,23 @@ namespace Sensore_Project.Repositories
 
         public async Task<Alert?> GetByIdAsync(int id)
         {
+            // Fetching alert by id with comments
             return await _context.Alerts
                 .AsNoTracking()
+                .Include(a => a.Comments)
                 .FirstOrDefaultAsync(a => a.Id == id);
         }
 
         public async Task AddAsync(Alert alert)
         {
+            // Adding new alert
             await _context.Alerts.AddAsync(alert);
             await _context.SaveChangesAsync();
         }
 
         public async Task ResolveAsync(int id)
         {
+            // Resolving alert
             var alert = await _context.Alerts.FindAsync(id);
 
             if (alert == null)
@@ -47,6 +53,7 @@ namespace Sensore_Project.Repositories
 
         public async Task DeleteAsync(int id)
         {
+            // Deleting alert
             var alert = await _context.Alerts.FindAsync(id);
 
             if (alert != null)
@@ -58,6 +65,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<List<Alert>> GetByTypeAsync(string alertType)
         {
+            // Fetching alerts by type
             if (string.IsNullOrWhiteSpace(alertType))
                 return new List<Alert>();
 
@@ -70,6 +78,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<List<Alert>> GetByPressureMapIdAsync(int pressureMapId)
         {
+            // Fetching alerts by pressure map id
             return await _context.Alerts
                 .AsNoTracking()
                 .Where(a => a.PressureMapId == pressureMapId)
@@ -79,6 +88,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<List<Alert>> GetUnresolvedAsync()
         {
+            // Fetching unresolved alerts
             return await _context.Alerts
                 .AsNoTracking()
                 .Where(a => !a.IsResolved)
@@ -88,6 +98,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<bool> AlertExistsForMapAsync(int pressureMapId)
         {
+            // Checking if alert exists for map
             return await _context.Alerts
                 .AsNoTracking()
                 .AnyAsync(a => a.PressureMapId == pressureMapId);
@@ -95,6 +106,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<List<Alert>> GetFilteredAsync(DateTime? start, DateTime? end, string? type, string? status)
         {
+            // Fetching filtered alerts
             var query = _context.Alerts.AsNoTracking().AsQueryable();
 
             if (start.HasValue)
@@ -119,6 +131,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<List<(DateTime Timestamp, int Count)>> GetTrendAsync(DateTime start, DateTime end, string bucket)
         {
+            // Fetching trend
             var alerts = await _context.Alerts
                 .AsNoTracking()
                 .Where(a => a.Timestamp >= start && a.Timestamp <= end)
@@ -139,6 +152,7 @@ namespace Sensore_Project.Repositories
 
         public async Task<(int Total, int Active, int Resolved, double MaxPressure, Dictionary<string, int> ByType)> GetStatsAsync(DateTime? start, DateTime? end)
         {
+            // Fetching stats
             var query = _context.Alerts.AsNoTracking().AsQueryable();
 
             if (start.HasValue)
@@ -157,6 +171,57 @@ namespace Sensore_Project.Repositories
                                .ToDictionary(g => g.Key, g => g.Count());
 
             return (total, active, resolved, maxPressure, byType);
+        }
+
+        public async Task<List<Comment>> GetCommentsForAlertAsync(int alertId)
+        {
+            // Fetching comments for alert
+            return await _context.Comments
+                .AsNoTracking()
+                .Where(c => c.AlertId == alertId)
+                .OrderByDescending(c => c.CreatedAt)
+                .ToListAsync();
+        }
+
+        public async Task<Comment?> AddCommentAsync(int alertId, int userId, string commentText)
+        {
+            // Adding comment
+            var alertExists = await _context.Alerts.AnyAsync(a => a.Id == alertId);
+            if (!alertExists)
+            {
+                return null;
+            }
+
+            var comment = new Comment
+            {
+                AlertId = alertId,
+                UserId = userId,
+                CommentText = commentText,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _context.Comments.AddAsync(comment);
+            await _context.SaveChangesAsync();
+
+            return comment;
+        }
+
+        public async Task<Comment?> AddOrUpdateFeedbackAsync(int commentId, int feedbackUserId, string feedbackText)
+        {
+            // Adding or updating feedback
+            var comment = await _context.Comments.FirstOrDefaultAsync(c => c.Id == commentId);
+            if (comment == null)
+            {
+                return null;
+            }
+
+            comment.FeedbackText = feedbackText;
+            comment.FeedbackUserId = feedbackUserId;
+            comment.FeedbackProvidedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return comment;
         }
     }
 }

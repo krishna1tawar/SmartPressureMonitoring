@@ -1,11 +1,21 @@
-﻿public class User
+﻿namespace Sensore_Project.Models
 {
-    public int Id { get; set; }
+    /// <summary>
+    /// Represents a user in the system (Patient, Clinician, or Admin).
+    /// </summary>
+    public class User
+    {
+        public int Id { get; set; }
 
-    public string FullName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
 
-    // Default user role
-    public string Role { get; set; } = "Patient";
+        public string Email { get; set; } = string.Empty;
+
+        public string PasswordHash { get; set; } = string.Empty;
+
+        /// <summary>
+        /// User role: Patient, Clinician, or Admin.
+        /// </summary>
+        public string Role { get; set; } = "Patient";
+    }
 }

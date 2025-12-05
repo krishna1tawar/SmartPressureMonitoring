@@ -73,6 +73,9 @@ namespace Sensore_Project.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int>("AlertId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CommentText")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -80,10 +83,21 @@ namespace Sensore_Project.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("FeedbackText")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FeedbackProvidedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("FeedbackUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AlertId");
 
                     b.ToTable("Comments");
                 });
@@ -194,6 +208,19 @@ namespace Sensore_Project.Migrations
                         .WithMany()
                         .HasForeignKey("PressureMapId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Comments");
+                });
+
+            modelBuilder.Entity("Sensore_Project.Models.Comment", b =>
+                {
+                    b.HasOne("Sensore_Project.Models.Alert", "Alert")
+                        .WithMany("Comments")
+                        .HasForeignKey("AlertId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Alert");
                 });
 
             modelBuilder.Entity("Sensore_Project.Models.RiskPrediction", b =>

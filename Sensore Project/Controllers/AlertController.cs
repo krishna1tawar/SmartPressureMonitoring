@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Sensore_Project.Models.DTOs;
 using Sensore_Project.Models;
 using Sensore_Project.Repositories;
-using Sensore_Project.Models.DTOs;
 using Sensore_Project.Services;
+using System.Linq;
+using System.Threading;
 
 namespace Sensore_Project.Controllers
 {
@@ -159,14 +161,16 @@ namespace Sensore_Project.Controllers
                 Timestamp = alert.Timestamp,
                 IsResolved = alert.IsResolved,
                 PressureMapId = alert.PressureMapId,
-                ClusterInfo = alert.ClusterInfo
+                ClusterInfo = alert.ClusterInfo,
+                Comments = alert.Comments
+                    .OrderByDescending(c => c.CreatedAt)
+                    .Select(MapComment)
+                    .ToList()
             };
 
-            // Fetch pressure map if available
+            // Fetch pressure map data if available
             if (alert.PressureMapId.HasValue)
             {
-                var sensorData = await _pressureMapRepo.GetLatestAsync();
-                // Try to find the specific sensor data by ID
                 var mapData = await _pressureMapRepo.GetByIdAsync(alert.PressureMapId.Value);
                 if (mapData?.PressureMap != null)
                 {
@@ -178,6 +182,59 @@ namespace Sensore_Project.Controllers
             }
 
             return Ok(response);
+        }
+
+        // GET: api/alerts/{id}/comments
+        [HttpGet("{id:int}/comments")]
+        public async Task<IActionResult> GetAlertComments(int id)
+        {
+            var alert = await _alertsRepo.GetByIdAsync(id);
+            if (alert == null)
+                return NotFound(new { message = "Alert not found." });
+
+            var comments = await _alertsRepo.GetCommentsForAlertAsync(id);
+
+            var response = comments
+                .Select(MapComment)
+                .ToList();
+
+            return Ok(response);
+        }
+
+        // POST: api/alerts/{id}/comments
+        [HttpPost("{id:int}/comments")]
+        public async Task<IActionResult> AddAlertComment(int id, [FromBody] AddCommentRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.CommentText))
+                return BadRequest(new { message = "Comment text is required." });
+
+            var userId = request.UserId.HasValue && request.UserId.Value > 0
+                ? request.UserId.Value
+                : 1;
+
+            var comment = await _alertsRepo.AddCommentAsync(id, userId, request.CommentText.Trim());
+            if (comment == null)
+                return NotFound(new { message = "Alert not found." });
+
+            return Ok(MapComment(comment));
+        }
+
+        // POST: api/alerts/comments/{commentId}/feedback
+        [HttpPost("comments/{commentId:int}/feedback")]
+        public async Task<IActionResult> AddOrUpdateCommentFeedback(int commentId, [FromBody] AddFeedbackRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.FeedbackText))
+                return BadRequest(new { message = "Feedback text is required." });
+
+            var userId = request.UserId.HasValue && request.UserId.Value > 0
+                ? request.UserId.Value
+                : 1;
+
+            var comment = await _alertsRepo.AddOrUpdateFeedbackAsync(commentId, userId, request.FeedbackText.Trim());
+            if (comment == null)
+                return NotFound(new { message = "Comment not found." });
+
+            return Ok(MapComment(comment));
         }
 
         // POST: api/alerts/scan
@@ -199,6 +256,30 @@ namespace Sensore_Project.Controllers
             };
 
             return Ok(response);
+        }
+
+        private static AlertCommentResponse MapComment(Comment comment) => new()
+        {
+            Id = comment.Id,
+            AlertId = comment.AlertId,
+            UserId = comment.UserId,
+            CommentText = comment.CommentText,
+            CreatedAt = comment.CreatedAt,
+            FeedbackText = comment.FeedbackText,
+            FeedbackProvidedAt = comment.FeedbackProvidedAt,
+            FeedbackUserId = comment.FeedbackUserId
+        };
+
+        public class AddCommentRequest
+        {
+            public string CommentText { get; set; } = string.Empty;
+            public int? UserId { get; set; }
+        }
+
+        public class AddFeedbackRequest
+        {
+            public string FeedbackText { get; set; } = string.Empty;
+            public int? UserId { get; set; }
         }
     }
 }

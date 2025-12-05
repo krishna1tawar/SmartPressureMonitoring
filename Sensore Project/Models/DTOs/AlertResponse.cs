@@ -3,6 +3,9 @@ using Sensore_Project.Models;
 
 namespace Sensore_Project.Models.DTOs
 {
+    /// <summary>
+    /// Basic alert response DTO for list views.
+    /// </summary>
     public class AlertResponse
     {
         public int Id { get; set; }
@@ -15,4 +18,3 @@ namespace Sensore_Project.Models.DTOs
         public ClusterInfo? ClusterInfo { get; set; }
     }
 }
-

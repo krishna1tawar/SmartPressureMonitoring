@@ -2,6 +2,9 @@
 
 namespace Sensore_Project.Repositories
 {
+    /// <summary>
+    /// Repository interface for sensor data operations.
+    /// </summary>
     public interface ISensorDataRepository
     {
         Task<SensorData?> GetLatestAsync();

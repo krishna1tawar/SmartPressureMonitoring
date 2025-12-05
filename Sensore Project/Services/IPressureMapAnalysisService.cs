@@ -28,5 +28,3 @@ namespace Sensore_Project.Services
         bool ShouldGenerateAlert(PressureMetrics metrics);
     }
 }
-
-

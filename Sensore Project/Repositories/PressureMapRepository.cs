@@ -134,5 +134,3 @@ namespace Sensore_Project.Repositories
         }
     }
 }
-
-

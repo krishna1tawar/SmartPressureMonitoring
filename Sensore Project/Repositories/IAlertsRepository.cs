@@ -22,5 +22,10 @@ namespace Sensore_Project.Repositories
         Task<List<Alert>> GetFilteredAsync(DateTime? start, DateTime? end, string? type, string? status);
         Task<List<(DateTime Timestamp, int Count)>> GetTrendAsync(DateTime start, DateTime end, string bucket);
         Task<(int Total, int Active, int Resolved, double MaxPressure, Dictionary<string, int> ByType)> GetStatsAsync(DateTime? start, DateTime? end);
+
+        // Comments & feedback
+        Task<List<Comment>> GetCommentsForAlertAsync(int alertId);
+        Task<Comment?> AddCommentAsync(int alertId, int userId, string commentText);
+        Task<Comment?> AddOrUpdateFeedbackAsync(int commentId, int feedbackUserId, string feedbackText);
     }
 }

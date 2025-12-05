@@ -2,6 +2,9 @@
 
 namespace Sensore_Project.Repositories
 {
+    /// <summary>
+    /// Repository interface for risk prediction operations.
+    /// </summary>
     public interface IRiskPredictionRepository
     {
         Task AddAsync(RiskPrediction entity, CancellationToken ct = default);

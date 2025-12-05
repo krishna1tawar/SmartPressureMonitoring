@@ -208,6 +208,25 @@
                     <h6 class="fw-bold">Cluster Information</h6>
                     <div id="clusterInfoContent"></div>
                 </div>
+
+                <!-- Comments & Feedback -->
+                <div id="commentsSection" class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold mb-0">Comments</h6>
+                        <span class="badge rounded-pill bg-secondary" id="commentsCountBadge">0</span>
+                    </div>
+                    <div id="commentsList" class="mb-3"></div>
+                    <form id="addCommentForm" class="border rounded p-3 bg-light">
+                        <div class="mb-2">
+                            <label for="newCommentText" class="form-label small fw-semibold">Add a comment</label>
+                            <textarea id="newCommentText" class="form-control form-control-sm" rows="2" placeholder="Share your observation..."></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-sm btn-primary">Post Comment</button>
+                        </div>
+                        <div class="text-danger small mt-2 d-none" id="commentError"></div>
+                    </form>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -229,6 +248,8 @@
     let alertTrendChart = null;
     let alertTypeChart = null;
     let currentAlertId = null;
+    let currentAlertDetail = null;
+    let commentsCache = [];
 
     // DOM Elements
     const timeRangeButtons = document.querySelectorAll('#timeRangeGroup button');
@@ -238,6 +259,11 @@
     const scanBtn = document.getElementById('scanBtn');
     const scanStatus = document.getElementById('scanStatus');
     const scanStatusText = document.getElementById('scanStatusText');
+    const addCommentForm = document.getElementById('addCommentForm');
+    const newCommentText = document.getElementById('newCommentText');
+    const commentError = document.getElementById('commentError');
+    const commentsList = document.getElementById('commentsList');
+    const commentsCountBadge = document.getElementById('commentsCountBadge');
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
@@ -272,6 +298,10 @@
         }
 
         document.getElementById('modalResolveBtn').addEventListener('click', resolveCurrentAlert);
+
+        if (addCommentForm) {
+            addCommentForm.addEventListener('submit', handleAddComment);
+        }
     }
 
     function showScanStatus(message, variant = 'info') {
@@ -618,6 +648,8 @@
     }
 
     function populateModal(detail) {
+        currentAlertDetail = detail;
+
         document.getElementById('modalAlertId').textContent = detail.id;
         document.getElementById('modalAlertType').textContent = detail.alertType;
         document.getElementById('modalAlertPressure').textContent = detail.pressure.toFixed(1);
@@ -679,6 +711,268 @@
             clusterContainer.classList.add('d-none');
             clusterContent.innerHTML = '';
         }
+
+        renderComments(detail.comments ?? []);
+    }
+
+    function renderComments(comments) {
+        if (!commentsList || !commentsCountBadge) {
+            return;
+        }
+
+        commentsCache = Array.isArray(comments) ? comments : [];
+        commentsCountBadge.textContent = commentsCache.length;
+
+        if (commentsCache.length === 0) {
+            commentsList.innerHTML = '<p class="text-muted mb-0">No comments yet. Be the first to add one.</p>';
+            return;
+        }
+
+        const html = commentsCache.map(comment => {
+            const commentTimestamp = formatDateTime(comment.createdAt);
+            const feedbackTimestamp = comment.feedbackProvidedAt ? formatDateTime(comment.feedbackProvidedAt) : '';
+
+            return `
+                <div class="comment-card border rounded p-3 mb-3" data-comment-id="${comment.id}">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <span class="fw-semibold">User #${comment.userId}</span>
+                        </div>
+                        <small class="text-muted">${commentTimestamp}</small>
+                    </div>
+                    <p class="mb-2">${escapeHtml(comment.commentText)}</p>
+                    <div class="feedback-view mb-2">
+                        ${comment.feedbackText
+                            ? `<div class="bg-light border rounded p-2">
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <span class="fw-semibold">Feedback</span>
+                                        <small class="text-muted">${feedbackTimestamp}</small>
+                                    </div>
+                                    <p class="mb-1">${escapeHtml(comment.feedbackText)}</p>
+                                    ${comment.feedbackUserId ? `<small class="text-muted">By user #${comment.feedbackUserId}</small>` : ''}
+                                </div>`
+                            : '<small class="text-muted">No feedback yet.</small>'}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary toggle-feedback-btn" data-comment-id="${comment.id}">
+                        ${comment.feedbackText ? 'Update Feedback' : 'Add Feedback'}
+                    </button>
+                    <form class="feedback-form d-none mt-2" data-comment-id="${comment.id}">
+                        <textarea class="form-control form-control-sm feedback-textarea" rows="2" placeholder="Provide feedback..."></textarea>
+                        <div class="text-end mt-2">
+                            <button type="button" class="btn btn-sm btn-link me-2 cancel-feedback-btn">Cancel</button>
+                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </div>
+                        <div class="text-danger small mt-2 d-none feedback-error">Feedback cannot be empty.</div>
+                    </form>
+                </div>`;
+        }).join('');
+
+        commentsList.innerHTML = html;
+        attachCommentHandlers();
+    }
+
+    function attachCommentHandlers() {
+        if (!commentsList) {
+            return;
+        }
+
+        commentsList.querySelectorAll('.comment-card').forEach(card => {
+            const commentId = Number(card.dataset.commentId);
+            const comment = commentsCache.find(c => c.id === commentId);
+            const form = card.querySelector('.feedback-form');
+            const textarea = card.querySelector('.feedback-textarea');
+            const errorEl = card.querySelector('.feedback-error');
+
+            if (textarea && comment) {
+                textarea.value = comment.feedbackText ?? '';
+            }
+
+            const toggleBtn = card.querySelector('.toggle-feedback-btn');
+            if (toggleBtn && form) {
+                toggleBtn.addEventListener('click', () => {
+                    commentsList.querySelectorAll('.feedback-form').forEach(f => {
+                        if (f !== form) {
+                            f.classList.add('d-none');
+                        }
+                    });
+
+                    if (errorEl) {
+                        errorEl.classList.add('d-none');
+                    }
+
+                    form.classList.toggle('d-none');
+                    if (!form.classList.contains('d-none') && textarea) {
+                        textarea.focus();
+                    }
+                });
+            }
+
+            const cancelBtn = card.querySelector('.cancel-feedback-btn');
+            if (cancelBtn && form) {
+                cancelBtn.addEventListener('click', () => {
+                    form.classList.add('d-none');
+                    if (textarea && comment) {
+                        textarea.value = comment.feedbackText ?? '';
+                    }
+                    if (errorEl) {
+                        errorEl.classList.add('d-none');
+                    }
+                });
+            }
+
+            if (form) {
+                form.addEventListener('submit', handleFeedbackSubmit);
+            }
+        });
+    }
+
+    async function handleAddComment(event) {
+        event.preventDefault();
+
+        if (!currentAlertId || !newCommentText) {
+            return;
+        }
+
+        const commentText = newCommentText.value.trim();
+
+        if (!commentText) {
+            setCommentError('Please enter a comment before submitting.');
+            return;
+        }
+
+        setCommentError(null);
+
+        try {
+            const response = await fetch(`/api/alerts/${currentAlertId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ commentText })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to add comment');
+            }
+
+            newCommentText.value = '';
+            await reloadCurrentAlertDetail();
+        } catch (err) {
+            console.error('Failed to add comment', err);
+            setCommentError('Unable to add comment right now. Please try again.');
+        }
+    }
+
+    async function handleFeedbackSubmit(event) {
+        event.preventDefault();
+
+        const form = event.target.closest('.feedback-form');
+        if (!form) {
+            return;
+        }
+
+        const commentId = form.dataset.commentId;
+        const textarea = form.querySelector('.feedback-textarea');
+        const errorEl = form.querySelector('.feedback-error');
+
+        if (!textarea) {
+            return;
+        }
+
+        const feedbackText = textarea.value.trim();
+
+        if (!feedbackText) {
+            if (errorEl) {
+                errorEl.textContent = 'Feedback cannot be empty.';
+                errorEl.classList.remove('d-none');
+            }
+            return;
+        }
+
+        if (errorEl) {
+            errorEl.classList.add('d-none');
+        }
+
+        try {
+            const response = await fetch(`/api/alerts/comments/${commentId}/feedback`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ feedbackText })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save feedback');
+            }
+
+            await reloadCurrentAlertDetail();
+        } catch (err) {
+            console.error('Failed to save feedback', err);
+            if (errorEl) {
+                errorEl.textContent = 'Unable to save feedback. Please try again.';
+                errorEl.classList.remove('d-none');
+            }
+        }
+    }
+
+    async function reloadCurrentAlertDetail() {
+        if (!currentAlertId) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/alerts/${currentAlertId}/detail`);
+            if (!response.ok) {
+                throw new Error('Failed to refresh alert detail');
+            }
+
+            const detail = await response.json();
+            populateModal(detail);
+        } catch (err) {
+            console.error('Failed to refresh alert detail', err);
+        }
+    }
+
+    function setCommentError(message) {
+        if (!commentError) {
+            return;
+        }
+
+        if (message) {
+            commentError.textContent = message;
+            commentError.classList.remove('d-none');
+        } else {
+            commentError.textContent = '';
+            commentError.classList.add('d-none');
+        }
+    }
+
+    function formatDateTime(value) {
+        if (!value) {
+            return '-';
+        }
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+
+        return date.toLocaleString();
+    }
+
+    function escapeHtml(str) {
+        if (typeof str !== 'string') {
+            return '';
+        }
+
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/\n/g, '<br>');
     }
 
     function drawHeatmap(matrix) {

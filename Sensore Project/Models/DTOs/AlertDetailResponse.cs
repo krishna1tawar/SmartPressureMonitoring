@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace Sensore_Project.Models.DTOs
 {
     /// <summary>
@@ -23,5 +26,19 @@ namespace Sensore_Project.Models.DTOs
 
         // Metrics (if available)
         public PressureMetrics? Metrics { get; set; }
+
+        public List<AlertCommentResponse> Comments { get; set; } = new();
+    }
+
+    public class AlertCommentResponse
+    {
+        public int Id { get; set; }
+        public int AlertId { get; set; }
+        public int UserId { get; set; }
+        public string CommentText { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public string? FeedbackText { get; set; }
+        public DateTime? FeedbackProvidedAt { get; set; }
+        public int? FeedbackUserId { get; set; }
     }
 }

@@ -3,6 +3,9 @@ using Sensore_Project.Models;
 
 namespace Sensore_Project.Models.DTOs
 {
+    /// <summary>
+    /// Response DTO for risk prediction results.
+    /// </summary>
     public class RiskPredictionResponse
     {
         public int Id { get; set; }
@@ -14,4 +17,3 @@ namespace Sensore_Project.Models.DTOs
         public MapRiskMetrics? MapMetrics { get; set; }
     }
 }
-
